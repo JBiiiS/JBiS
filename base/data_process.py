@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
-import FinanceDataReader as fdr
+import FinanceDataReader as fdr # type: ignore
 import random
 from tqdm import tqdm
 
