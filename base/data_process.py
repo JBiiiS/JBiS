@@ -95,7 +95,7 @@ def fdr_data_wo_ticker(TARGET_N_STOCKS, START_DATE, END_DATE, MKT):
     price_df = pd.DataFrame(close_data_dict)
 
     null_threshold = 10
-    null_counts = price_df.isnull().sum()
+    null_counts = pd.Series(price_df.isnull().sum())
 
     # Null이 기준치 이하인 우량 종목들만 남김
     valid_tickers = null_counts[null_counts <= null_threshold].index
@@ -132,7 +132,7 @@ def fdr_data_with_ticker(START_DATE, END_DATE, TICKER):
     # ---------------------------------------------------------
     
     null_threshold = 10
-    null_counts = price_df.isnull().sum()
+    null_counts = pd.Series(price_df.isnull().sum())
 
     # Null이 기준치 이하인 우량 종목들만 남김
     valid_tickers = null_counts[null_counts <= null_threshold].index
