@@ -52,7 +52,7 @@ class NeuralODE(nn.Module):
         z_traj = odeint(
             self.ode_func, 
             z0, 
-            self.config.times, 
+            self.config.ode_times, 
             method=self.config.solver_method,
             atol=self.config.atol,
             rtol=self.config.rtol
