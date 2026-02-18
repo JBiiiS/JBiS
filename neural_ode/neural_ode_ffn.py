@@ -4,7 +4,7 @@ import numpy as np
 
 from neural_ode.neural_ode_config import NeuralODEConfig
 
-class NeuralODEEncoder(nn.Modul):
+class NeuralODEEncoder(nn.Module):
     """
     [Encoder]
     Reads the observed time-series data and produces the 
