@@ -2,13 +2,15 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-class NeuralODEEncoder(nn.Module):
+from neural_ode.neural_ode_config import NeuralODEConfig
+
+class NeuralODEEncoder(nn.Modul):
     """
     [Encoder]
     Reads the observed time-series data and produces the 
     parameters (mean, log_variance) of the latent distribution q(z0|x).
     """
-    def __init__(self, config):
+    def __init__(self, config: NeuralODEConfig):
         super().__init__()
         
         # 1. Recurrent Layer (GRU) to process time-series

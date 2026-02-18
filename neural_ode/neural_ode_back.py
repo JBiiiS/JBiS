@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from neural_ode_config import NeuralODEConfig
+from neural_ode.neural_ode_config import NeuralODEConfig
 
 class ODEFunc(nn.Module):
     """

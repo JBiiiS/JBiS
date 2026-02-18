@@ -4,7 +4,7 @@ import torch.nn as nn
 # Standard library for Neural ODEs (Auto-differentiable solver)
 from torchdiffeq import odeint
 
-from neural_ode_config import NeuralODEConfig
+from neural_ode.neural_ode_config import NeuralODEConfig
 
 class NeuralODE(nn.Module):
     """
