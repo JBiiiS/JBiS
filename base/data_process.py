@@ -6,7 +6,7 @@ import FinanceDataReader as fdr  # type: ignore
 import random
 from tqdm import tqdm
 
-def clean_price_data(price_series):
+def clean_price_data(price_series, no_minus = False):
     # 1. Pandas Series로 변환 (아직 아니라면)
     if not isinstance(price_series, (pd.DataFrame,pd.Series)):
         try:
@@ -25,9 +25,10 @@ def clean_price_data(price_series):
     s = price_series
     
 
-    # 2. 0 또는 음수값이 있다면 NaN으로 처리 (비정상 데이터 제거)
-    s[s <= 0] = np.nan
-    print(f'The number of Nulls : {s.isnull().sum()}')
+    # 2. 어떤 데이터 중 0 또는 음수값이 있다면 NaN으로 처리 (비정상 데이터 제거)
+    if no_minus == True:
+        s[s <= 0] = np.nan
+        print(f'The number of <= 0 data : {s.isnull().sum()}')
 
     # 3. 선형 보간 (Linear Interpolation)
     # 주변 가격의 평균으로 메꿈으로써 수익률의 급격한 왜곡 방지
