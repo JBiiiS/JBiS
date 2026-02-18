@@ -130,19 +130,19 @@ def fdr_data_with_ticker(START_DATE, END_DATE, TICKER):
     # ---------------------------------------------------------
     # 2. 전처리
     # ---------------------------------------------------------
-    
-    null_threshold = 10
-    null_counts = pd.Series(price_df.isnull().sum())
+    if type(TICKER) == list:
+        null_threshold = 10
+        null_counts = pd.Series(price_df.isnull().sum())
 
-    # Null이 기준치 이하인 우량 종목들만 남김
-    valid_tickers = null_counts[null_counts <= null_threshold].index
-    dropped_tickers = list(set(price_df.columns) - set(valid_tickers))
+        # Null이 기준치 이하인 우량 종목들만 남김
+        valid_tickers = null_counts[null_counts <= null_threshold].index
+        dropped_tickers = list(set(price_df.columns) - set(valid_tickers))
 
-    price_df = price_df[valid_tickers]
+        price_df = price_df[valid_tickers]
 
-    print(f" -> Null {null_threshold}개 초과 종목 {len(dropped_tickers)}개 제거됨")
-    if len(dropped_tickers) > 0:
-        print(f"    (제거된 종목 예시: {dropped_tickers[:5]} ...)")
+        print(f" -> Null {null_threshold}개 초과 종목 {len(dropped_tickers)}개 제거됨")
+        if len(dropped_tickers) > 0:
+            print(f"    (제거된 종목 예시: {dropped_tickers[:5]} ...)")
 
     return price_df
 
