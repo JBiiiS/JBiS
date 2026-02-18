@@ -125,7 +125,7 @@ def fdr_data_with_ticker(START_DATE, END_DATE, TICKER):
         price_df = pd.DataFrame(close_data_dict)
 
     elif type(TICKER) == str:
-        price_df = pd.Series((fdr.Datareader(TICKER, START_DATE, END_DATE))['Close'])
+        price_df = pd.Series((fdr.DataReader(TICKER, START_DATE, END_DATE))['Close'])
 
     # ---------------------------------------------------------
     # 2. 전처리
