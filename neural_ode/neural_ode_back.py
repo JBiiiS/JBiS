@@ -57,6 +57,8 @@ class NeuralODEDecoder(nn.Module):
         
         # We use a small MLP to map Latent Dim -> Input Dim (Stock Price)
         # Architecture: Linear -> ReLU -> Linear
+        self.steps = config.steps
+        self.multiplier_of_times = config.multiplier_of_times
         
         self.net = nn.Sequential(
             # Layer 1: Expand from Latent Space to Hidden Dimension
@@ -67,21 +69,22 @@ class NeuralODEDecoder(nn.Module):
             nn.Linear(config.rec_hidden_dim, config.input_dim)
         )
 
-    def forward(self, z_traj):
+    def forward(self, z):
         """
-        Args:
-            z_traj: The latent trajectory from ODE Solver.
-                    Shape: [Batch, Time, Latent_Dim]
-                    
         Returns:
             x_hat: The reconstructed stock prices.
                    Shape: [Batch, Time, Input_Dim]
         """
         # PyTorch's nn.Linear applies to the LAST dimension automatically.
         # So it works perfectly on [Batch, Time, Dim] without any reshaping loops.
-        x_hat = self.net(z_traj)
-        
-        return x_hat
+        x_hat = self.net(z)
+
+        indices_where_real_data = torch.arange(0, self.steps, 1) * self.multiplier_of_times 
+
+        x_hat_where_real_data = torch.index_select(x_hat, dim=1, index=indices_where_real_data)
+
+
+        return x_hat, x_hat_where_real_data
 
 
 

@@ -43,7 +43,7 @@ class NeuralODEConfig(BaseConfig):
     rtol: float = 1e-5
 
     # How many nodes to generate
-    multipler_of_times : int = 5
+    multiplier_of_times : int = 5
 
     # ----------------------------------
     # [6] Loss & Regularization
@@ -58,10 +58,7 @@ class NeuralODEConfig(BaseConfig):
         # Call the parent's post_init to calculate 'dt'
         super().__post_init__()
 
-        self.ode_times = torch.tensor(
-            np.linspace(0, self.T, self.multipler_of_times * (self.steps-1) + 1),
-            dtype=torch.float32  
-        ).to(self.device)
+        self.ode_times = torch.linspace(0, self.T, (self.multiplier_of_times * (self.steps-1) + 1)).to(self.device)
         
         # Validation logic (optional)
         if self.solver_method == 'dopri5' and self.steps < 5:

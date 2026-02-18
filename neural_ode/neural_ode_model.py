@@ -29,16 +29,12 @@ class NeuralODE(nn.Module):
             x: Input stock data [Batch, Time, Dim]
             time_steps: Physical time points to solve for [Time] (e.g., 0, 1/365, ...)
         """
-        # [LOGICAL FIX] Reverse the input time.
-        # The RNN reads x_29, x_28, ..., x_0.
-        # Its final state h_n will correspond to the "state at t=0".
-        x_reversed = torch.flip(x, [1])
-
+       
         # ----------------------------------------
         # Phase 1: Encode & Sample (The "Start")
         # ----------------------------------------
         # mu, logvar: [Batch, latent_dim]
-        mu, logvar = self.encoder(x_reversed)
+        mu, logvar = self.encoder(x)
         
         # z0: [Batch, latent_dim] (Noisy initial state)
         z0 = self.sampler(mu, logvar)
@@ -46,10 +42,8 @@ class NeuralODE(nn.Module):
         # ----------------------------------------
         # Phase 2: Solve ODE (The "Evolution")
         # ----------------------------------------
-        # This is where the magic happens.
-        # We integrate 'ode_func' from t[0] to t[end] starting at z0.
-        # Output z_traj: [Time, Batch, latent_dim]
-        z_traj = odeint(
+        # Output z: [Time, Batch, latent_dim]
+        z = odeint(
             self.ode_func, 
             z0, 
             self.config.ode_times, 
@@ -59,11 +53,11 @@ class NeuralODE(nn.Module):
         )
 
         # Permute to [Batch, Time, Latent] to match standard format
-        z_traj = z_traj.permute(1, 0, 2)
+        z = z.permute(1, 0, 2)
 
         # ----------------------------------------
         # Phase 3: Decode (The "Observation")
         # ----------------------------------------
-        predicted_x = self.decoder(z_traj)
+        predicted_x, predicted_x_where_real_data = self.decoder(z)
 
-        return predicted_x, mu, logvar
+        return predicted_x, predicted_x_where_real_data, mu, logvar
