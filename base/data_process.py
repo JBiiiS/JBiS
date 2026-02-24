@@ -64,9 +64,11 @@ def fdr_data_wo_ticker(TARGET_N_STOCKS, START_DATE, END_DATE, MKT):
     # 2. 랜덤하게 n개 뽑기
     # ---------------------------------------------------------
     if TARGET_N_STOCKS > len(all_tickers):
-        return print(f'The targeted number of stocks is more than all stocks in {MKT} \n Target: {TARGET_N_STOCKS} | All: {len(all_tickers)}')
+        print(f'The targeted number of stocks is more than all stocks in {MKT} \n Target: {TARGET_N_STOCKS} | All: {len(all_tickers)}')
+        return None
+    
     else:
-        selected_tickers = random.sample(all_tickers, ((TARGET_N_STOCKS * 1.3)//1))
+        selected_tickers = random.sample(all_tickers, (int(TARGET_N_STOCKS * 1.3)))
     
 
     print(f"다운로드 시도할 종목 수: {len(selected_tickers)}")
