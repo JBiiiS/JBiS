@@ -114,7 +114,7 @@ class CDEDiscriminator(nn.Module):
         #     After this step, the raw grid size T no longer matters.
         # ------------------------------------------------------------------
         coeffs = torchcde.natural_cubic_spline_coeffs(x, t=times)
-        spline = torchcde.NaturalCubicSpline(coeffs)
+        spline = torchcde.natural_cubic_spline(coeffs)
 
         # ------------------------------------------------------------------
         # [2] Initial hidden state from first observation
