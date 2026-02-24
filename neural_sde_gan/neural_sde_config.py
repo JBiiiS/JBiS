@@ -14,7 +14,7 @@ class NeuralSDEConfig(BaseConfig):
     # [Latent SDE State]
     # Dimension of z_t, the hidden state of the SDE.
     # The SDE evolves this latent vector over time.
-    latent_dim: int = 16
+    latent_dim: int = 96
 
     # [Brownian Motion]
     # Number of independent Brownian motion channels driving the SDE.
@@ -23,7 +23,7 @@ class NeuralSDEConfig(BaseConfig):
 
     # [Drift / Diffusion Networks]
     # Hidden layer width for μ_θ(t, z) and σ_θ(t, z).
-    sde_hidden_dim: int = 128
+    sde_hidden_dim: int = 64
 
     # [Readout / Decoder]
     # Maps latent state z_t → observation x_t.

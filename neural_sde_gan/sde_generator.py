@@ -28,6 +28,7 @@ class SDEDrift(nn.Module):
             nn.Linear(config.sde_hidden_dim, config.sde_hidden_dim),
             nn.Tanh(),
             nn.Linear(config.sde_hidden_dim, config.latent_dim),
+            nn.Tanh()
         )
         # Small weight init for numerical stability (same convention as ODEFunc)
         for m in self.net.modules():
@@ -79,6 +80,7 @@ class SDEDiffusion(nn.Module):
             nn.Linear(config.sde_hidden_dim, config.sde_hidden_dim),
             nn.Tanh(),
             nn.Linear(config.sde_hidden_dim, config.latent_dim * config.noise_dim),
+            nn.Tanh()
         )
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
