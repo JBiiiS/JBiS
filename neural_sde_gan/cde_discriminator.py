@@ -133,7 +133,7 @@ class CDEDiscriminator(nn.Module):
             z0     = h0,
             t      = t_eval,
             method = 'rk4',
-            adjoint_params = tuple(self.cde_func.parameters()) + (coeffs,)
+            adjoint = False
         )                                               # (B, 2, cde_hidden_dim)
 
         # ------------------------------------------------------------------
