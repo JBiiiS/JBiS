@@ -114,9 +114,14 @@ class CDEDiscriminator(nn.Module):
         #     coeffs encodes X as a piecewise cubic polynomial over 'times'.
         #     After this step, the raw grid size T no longer matters.
         # ------------------------------------------------------------------
+
+        coeffs = torchcde.linear_interpolation_coeffs(x, t=times)
+        spline = torchcde.LinearInterpolation(coeffs, t=times)
+        
+        '''
         coeffs = torchcde.natural_cubic_spline_coeffs(x, t=times)
         spline = torchcde.CubicSpline(coeffs)
-
+        '''
         # ------------------------------------------------------------------
         # [2] Initial hidden state from first observation
         # ------------------------------------------------------------------
