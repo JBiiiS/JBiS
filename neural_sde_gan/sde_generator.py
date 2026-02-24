@@ -11,8 +11,7 @@ class NoiseEmbedder(nn.Module):
 
 
         self.net = nn.Sequential(
-            nn.Linear(config.init_noise_dim, config.latent_dim),
-            nn.Tanh()
+            nn.Linear(config.init_noise_dim, config.latent_dim)
         )
 
     def forward(self, initial_noise):
@@ -99,7 +98,7 @@ class SDEDiffusion(nn.Module):
         )
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, mean=0, std=0.01)
+                nn.init.normal_(m.weight, mean=0, std=0.2)
                 nn.init.constant_(m.bias, val=0)
 
     def forward(self, t, z):
