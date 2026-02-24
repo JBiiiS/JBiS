@@ -11,6 +11,9 @@ class NeuralSDEConfig(BaseConfig):
     # How many nodes to augment physical time
     multiplier_of_times : int = 5
 
+    # [Noise Embedding State]
+    init_noise_dim: int = 40
+
     # [Latent SDE State]
     # Dimension of z_t, the hidden state of the SDE.
     # The SDE evolves this latent vector over time.
@@ -43,12 +46,13 @@ class NeuralSDEConfig(BaseConfig):
     # ----------------------------------
     # [6] SDE Solver Settings
     # ----------------------------------
-
+    noise_type: str = 'diagonal'
+    sde_type: str = 'ito'
     # Numerical integration method passed to torchsde.sdeint.
     # 'euler'     : Euler-Maruyama  (fast, first-order, good for training)
     # 'milstein'  : Milstein        (second-order, slightly more accurate)
     # 'srk'       : Stochastic RK   (higher-order, slower)
-    sde_method: str = 'euler'
+    sde_method: str = 'milstein'
 
     # ----------------------------------
     # [7] WGAN-GP Training Settings

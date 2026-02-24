@@ -4,7 +4,22 @@ import torchsde # type: ignore
 from neural_sde_gan.neural_sde_config import NeuralSDEConfig
 
 
-# =============================================================================
+# [0} Generating Noise
+class NoiseEmbedder(nn.Module):
+    def __init__(self, config:NeuralSDEConfig):
+        super().__init__()
+
+
+        self.net = nn.Sequential(
+            nn.Linear(config.init_noise_dim, config.latent_dim),
+            nn.tanh()
+        )
+
+    def forward(self, initial_noise):
+        self.net(initial_noise)
+
+
+#=============================================================================
 # [1] Drift Network  μ_θ(t, z)
 # =============================================================================
 
@@ -115,8 +130,9 @@ class _SDE(nn.Module):
         .f(t, y)    : drift,     t is a 0-dim scalar tensor when it is taken as input
         .g(t, y)    : diffusion, t is a 0-dim scalar tensor when it is taken as input
     """
-    noise_type = 'general'
-    sde_type   = 'ito'
+    noise_type = NeuralSDEConfig.noise_type # Default: Diagonal
+    # Presume the residual noise is independent to each other
+    sde_type   = NeuralSDEConfig.sde_type # For Satisfying Martingale Property
 
     def __init__(self, drift: SDEDrift, diffusion: SDEDiffusion):
         super().__init__()
@@ -193,8 +209,11 @@ class SDEGenerator(nn.Module):
     def __init__(self, config: NeuralSDEConfig):
         super().__init__()
         self.config     = config
+        self.init_noise_dim = config.init_noise_dim
         self.latent_dim = config.latent_dim
 
+
+        self.embedder = NoiseEmbedder(config)
         self.drift     = SDEDrift(config)
         self.diffusion = SDEDiffusion(config)
         self._sde      = _SDE(self.drift, self.diffusion)
@@ -220,8 +239,14 @@ class SDEGenerator(nn.Module):
         ts         = self.config.sde_times_full                # (T_fine,)
         batch_size = self.config.batch_size
 
-        # z0 ~ N(0, I)  — pure noise, no encoder
-        z0 = torch.randn(batch_size, self.latent_dim, device=ts.device)
+        # init_noise ~ N(0, I)  — pure noise
+        init_noise = torch.randn(batch_size, self.init_noise_dim, device=ts.device)
+
+
+        # z0 : (b, latent_dim)
+        z0 = self.embedder(init_noise)
+
+
 
         # torchsde.sdeint returns (T_fine, B, latent_dim)
         z_path = torchsde.sdeint(
@@ -229,6 +254,7 @@ class SDEGenerator(nn.Module):
             y0     = z0,
             ts     = ts,
             method = self.config.sde_method,
+            adjoint = True
         )                                                      # (T_fine, B, latent_dim)
 
         z_path = z_path.permute(1, 0, 2)                      # (B, T_fine, latent_dim)

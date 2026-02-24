@@ -139,10 +139,7 @@ class CDEDiscriminator(nn.Module):
             z0      = h0,
             t       = t_eval,
             method  = 'rk4',
-            # GAN의 안정적인 역전파를 위해 adjoint를 True로 설정하고 
-            # coeffs를 파라미터에 포함시키는 것을 권장합니다.
             adjoint = False
-            #adjoint_params = tuple(self.cde_func.parameters()) + (coeffs,)
         )                              
         # (B, 2, cde_hidden_dim)
 
