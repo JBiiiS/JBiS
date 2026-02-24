@@ -117,7 +117,7 @@ class CDEDiscriminator(nn.Module):
 
         coeffs = torchcde.linear_interpolation_coeffs(x, t=times)
         spline = torchcde.LinearInterpolation(coeffs, t=times)
-        
+
         '''
         coeffs = torchcde.natural_cubic_spline_coeffs(x, t=times)
         spline = torchcde.CubicSpline(coeffs)
@@ -141,8 +141,8 @@ class CDEDiscriminator(nn.Module):
             method  = 'rk4',
             # GAN의 안정적인 역전파를 위해 adjoint를 True로 설정하고 
             # coeffs를 파라미터에 포함시키는 것을 권장합니다.
-            adjoint = True,
-            adjoint_params = tuple(self.cde_func.parameters()) + (coeffs,)
+            adjoint = False
+            #adjoint_params = tuple(self.cde_func.parameters()) + (coeffs,)
         )                              
         # (B, 2, cde_hidden_dim)
 
