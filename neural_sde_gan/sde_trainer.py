@@ -88,7 +88,7 @@ def _step_D(
     d_loss.backward()
     opt_D.step()
 
-    return d_loss.item()
+    return d_loss.item(), gp.item()
 
 
 # =============================================================================
