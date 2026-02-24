@@ -150,7 +150,7 @@ class SDEReadout(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(config.latent_dim, config.sde_hidden_dim),
             nn.ReLU(),
-            nn.Linear(config.sde_hidden_dim, config.output_dim),
+            nn.Linear(config.sde_hidden_dim, config.output_dim)
         )
 
     def forward(self, z):

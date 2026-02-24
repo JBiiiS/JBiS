@@ -35,6 +35,7 @@ class CDEFunc(nn.Module):
             nn.Tanh(),
             # Output: one row per hidden unit, one column per input channel
             nn.Linear(config.cde_hidden_dim, config.cde_hidden_dim * config.output_dim),
+            nn.Tanh()
         )
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
