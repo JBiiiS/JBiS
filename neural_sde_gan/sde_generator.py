@@ -16,8 +16,8 @@ class NoiseEmbedder(nn.Module):
         )
 
     def forward(self, initial_noise):
-        self.net(initial_noise)
-
+        z0 = self.net(initial_noise)
+        return z0
 
 #=============================================================================
 # [1] Drift Network  μ_θ(t, z)
