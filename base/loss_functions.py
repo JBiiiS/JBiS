@@ -94,6 +94,8 @@ def cvar_loss(pnl, alpha=0.05):
 
 def KLD_Loss(mu, logvar):
     kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1)
+    if torch.dim(kld) >= 2:
+        torch.mean(kld)
 
     return kld
         

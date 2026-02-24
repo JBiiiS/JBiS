@@ -19,16 +19,16 @@ class BaseConfig:
     # ----------------------------------
     # [2] 데이터 공통 설정 (Data)
     # ----------------------------------
-    num_assets: int = 500       # d: 자산 개수
-    batch_size: int = 64
+    num_assets: int = 100       # d: 자산 개수
+    batch_size: int = 16
     total_samples: int = 20000
     T: float = 30/252           # T: 윈도우 길이   
     steps: int = 30           # N: steps
     rv_window: int = 10
     r: float = 0.0
     num_epochs: int = 500
-    learning_rate: float = 1e-3
-    weight_decay: float = 0.0   # Optimizer 설정
+    learning_rate: float = 5e-5
+    weight_decay: float = 1e-4   # Optimizer 설정
 
     
     # ----------------------------------
