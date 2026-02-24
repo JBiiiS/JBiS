@@ -41,8 +41,10 @@ def _gradient_penalty(model: NeuralSDEGAN, real_x: torch.Tensor, fake_x: torch.T
         create_graph = True,
     )[0]                                                        # (B, steps, output_dim)
 
-    # L2 norm over (steps, output_dim), then (||·||_2 - 1)^2
-    gp = ((gradients.norm(2, dim=[1, 2]) - 1) ** 2).mean()
+    # L2 norm over (steps, output_dim), then (||·||_2 - 1)^2    
+    n_elements = gradients.shape[1] * gradients.shape[2]   # steps * output_dim
+    grad_norm  = gradients.norm(2, dim=[1, 2]) / (n_elements ** 0.5)
+    gp = ((grad_norm - 1) ** 2).mean()
     return gp
 
 
@@ -88,7 +90,7 @@ def _step_D(
     d_loss.backward()
     opt_D.step()
 
-    return d_loss.item(), gp.item()
+    return d_loss.item(), gp.item
 
 
 # =============================================================================
