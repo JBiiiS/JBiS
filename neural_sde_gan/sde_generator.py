@@ -12,7 +12,7 @@ class NoiseEmbedder(nn.Module):
 
         self.net = nn.Sequential(
             nn.Linear(config.init_noise_dim, config.latent_dim),
-            nn.tanh()
+            nn.Tanh()
         )
 
     def forward(self, initial_noise):
