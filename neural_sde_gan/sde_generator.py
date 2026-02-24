@@ -24,9 +24,9 @@ class SDEDrift(nn.Module):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(config.latent_dim + 1, config.sde_hidden_dim),  # +1 for time
-            nn.Tanh(),
+            nn.Softplus(),
             nn.Linear(config.sde_hidden_dim, config.sde_hidden_dim),
-            nn.Tanh(),
+            nn.Softplus(),
             nn.Linear(config.sde_hidden_dim, config.latent_dim),
             nn.Tanh()
         )
@@ -76,9 +76,9 @@ class SDEDiffusion(nn.Module):
 
         self.net = nn.Sequential(
             nn.Linear(config.latent_dim + 1, config.sde_hidden_dim),
-            nn.Tanh(),
+            nn.Softplus(),
             nn.Linear(config.sde_hidden_dim, config.sde_hidden_dim),
-            nn.Tanh(),
+            nn.Softplus(),
             nn.Linear(config.sde_hidden_dim, config.latent_dim * config.noise_dim),
             nn.Tanh()
         )

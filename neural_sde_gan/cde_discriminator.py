@@ -30,9 +30,9 @@ class CDEFunc(nn.Module):
 
         self.net = nn.Sequential(
             nn.Linear(config.cde_hidden_dim + 1, config.cde_hidden_dim),  # +1 for time
-            nn.Tanh(),
+            nn.Softplus(),
             nn.Linear(config.cde_hidden_dim, config.cde_hidden_dim),
-            nn.Tanh(),
+            nn.Softplus(),
             # Output: one row per hidden unit, one column per input channel
             nn.Linear(config.cde_hidden_dim, config.cde_hidden_dim * config.output_dim),
             nn.Tanh()
@@ -129,13 +129,17 @@ class CDEDiscriminator(nn.Module):
         # ------------------------------------------------------------------
         t_eval = times[[0, -1]]                         # (2,)  →  [0, T]
         h = torchcde.cdeint(
-            X      = spline,
-            func   = self.cde_func,
-            z0     = h0,
-            t      = t_eval,
-            method = 'rk4',
-            adjoint = False
-        )                                               # (B, 2, cde_hidden_dim)
+            X       = spline,
+            func    = self.cde_func,
+            z0      = h0,
+            t       = t_eval,
+            method  = 'rk4',
+            # GAN의 안정적인 역전파를 위해 adjoint를 True로 설정하고 
+            # coeffs를 파라미터에 포함시키는 것을 권장합니다.
+            adjoint = True,
+            adjoint_params = tuple(self.cde_func.parameters()) + (coeffs,)
+        )                              
+        # (B, 2, cde_hidden_dim)
 
         # ------------------------------------------------------------------
         # [4] Readout from final hidden state h(T)
