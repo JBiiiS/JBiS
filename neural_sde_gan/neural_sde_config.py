@@ -46,13 +46,13 @@ class NeuralSDEConfig(BaseConfig):
     # ----------------------------------
     # [6] SDE Solver Settings
     # ----------------------------------
-    noise_type: str = 'diagonal'
-    sde_type: str = 'ito'
+    noise_type: str = 'general'
+    sde_type: str = 'stratonovich'
     # Numerical integration method passed to torchsde.sdeint.
     # 'euler'     : Euler-Maruyama  (fast, first-order, good for training)
     # 'milstein'  : Milstein        (second-order, slightly more accurate)
     # 'srk'       : Stochastic RK   (higher-order, slower)
-    sde_method: str = 'milstein'
+    sde_method: str = 'midpoint'
 
     # ----------------------------------
     # [7] WGAN-GP Training Settings
