@@ -66,7 +66,7 @@ class SDEDrift(nn.Module):
         t_batch = torch.full((z.size(0), 1), float(t), device=z.device, dtype=z.dtype)
         tz = torch.cat([t_batch, z], dim=-1)   # (B, 1 + latent_dim)
         out = self.net(tz)
-        return nn.Tanh(out + z)
+        return torch.Tanh(out + z)
 
 
 # =============================================================================
@@ -122,7 +122,7 @@ class SDEDiffusion(nn.Module):
         tz = torch.cat([t_batch, z], dim=-1)
         out = self.net(tz)  
         out = out.view(z.size(0), self.latent_dim, self.noise_dim)                                             # (B, latent_dim * noise_dim)
-        return nn.Tanh(out + z.unsqueeze(-1))   # (B, latent_dim, noise_dim)
+        return torch.Tanh(out + z.unsqueeze(-1))   # (B, latent_dim, noise_dim)
 
 
 # =============================================================================
