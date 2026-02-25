@@ -48,7 +48,7 @@ class SDEDrift(nn.Module):
         # Small weight init for numerical stability (same convention as ODEFunc)
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, mean=0, std=0.01)
+                nn.init.xavier_uniform_(m.weight)
                 nn.init.constant_(m.bias, val=0)
 
     def forward(self, t, z):
@@ -104,7 +104,7 @@ class SDEDiffusion(nn.Module):
         )
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, mean=0, std=0.01)
+                nn.init.xavier_uniform_(m.weight)
                 nn.init.constant_(m.bias, val=0)
 
     def forward(self, t, z):
