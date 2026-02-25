@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchsde # type: ignore
+from torchsde import BrownianInterval #type:ignore
 from neural_sde_gan.neural_sde_config import NeuralSDEConfig
 
 
@@ -245,6 +246,13 @@ class SDEGenerator(nn.Module):
         # z0 : (b, latent_dim)
         z0 = self.embedder(init_noise)
 
+        bm = BrownianInterval(
+        t0        = ts[0],
+        t1        = ts[-1],
+        size      = (batch_size, self.config.noise_dim),
+        device    = self.config.device,
+        levy_area_approximation = 'none'  # 속도 향상
+    )
 
 
         # torchsde.sdeint returns (T_fine, B, latent_dim)
