@@ -58,12 +58,15 @@ class SDEDrift(nn.Module):
             z : (B, latent_dim)
         Returns:
             (B, latent_dim) — drift vector
+            
+    0225 revision: introducing skip connection structure to stop gradient vanishing
         """
         # When a solver proceeds, the calculation is operated with discrete t node, not a full tensor. So, at each node, t is a 0-dim scalar and we can add each scalar into input; broadcast to (B, 1) via multiplication
 
         t_batch = torch.full((z.size(0), 1), float(t), device=z.device, dtype=z.dtype)
         tz = torch.cat([t_batch, z], dim=-1)   # (B, 1 + latent_dim)
-        return self.net(tz)
+        out = self.net(tz)
+        return nn.Tanh(out + z)
 
 
 # =============================================================================
@@ -82,6 +85,8 @@ class SDEDiffusion(nn.Module):
 
     Input  : (t, z)  →  [scalar 0-dim tensor, (B, latent_dim)]
     Output : (B, latent_dim, noise_dim), calculating noise fitting to the noise dim automatically
+
+
     """
 
     def __init__(self, config: NeuralSDEConfig):
@@ -109,11 +114,15 @@ class SDEDiffusion(nn.Module):
             z : (B, latent_dim)
         Returns:
             (B, latent_dim, noise_dim)
+
+
+        0225 revision: introducing skip connection structure to stop gradient vanishing
         """
         t_batch = torch.full((z.size(0), 1), float(t), device=z.device, dtype=z.dtype)
         tz = torch.cat([t_batch, z], dim=-1)
-        out = self.net(tz)                                              # (B, latent_dim * noise_dim)
-        return out.view(z.size(0), self.latent_dim, self.noise_dim)    # (B, latent_dim, noise_dim)
+        out = self.net(tz)  
+        out = out.view(z.size(0), self.latent_dim, self.noise_dim)                                             # (B, latent_dim * noise_dim)
+        return nn.Tanh(out + z.unsqueeze(-1))   # (B, latent_dim, noise_dim)
 
 
 # =============================================================================
