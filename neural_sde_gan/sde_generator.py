@@ -98,7 +98,7 @@ class SDEDiffusion(nn.Module):
         )
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, mean=0, std=0.2)
+                nn.init.normal_(m.weight, mean=0, std=0.01)
                 nn.init.constant_(m.bias, val=0)
 
     def forward(self, t, z):
