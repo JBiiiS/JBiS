@@ -173,7 +173,7 @@ class SDEReadout(nn.Module):
     def __init__(self, config: NeuralSDEConfig):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(config.latent_dim, config.sde_hidden_dim),
+            nn.Linear(config.latent_dim, config.output_dim),
         )
 
     def forward(self, z):
