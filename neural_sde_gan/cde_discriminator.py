@@ -107,7 +107,7 @@ class CDEDiscriminator(nn.Module):
                                        LipSwish(),
                                        nn.Linear(config.cde_hidden_dim, config.cde_hidden_dim)
         )
-        for m in self.net.modules():
+        for m in self.h0_linear.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
                 nn.init.constant_(m.bias, val=0)
