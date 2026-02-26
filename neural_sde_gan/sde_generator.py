@@ -12,8 +12,10 @@ class NoiseEmbedder(nn.Module):
 
 
         self.net = nn.Sequential(
-            nn.Linear(config.init_noise_dim, config.latent_dim)
-        )
+            nn.Linear(config.init_noise_dim, config.latent_dim))
+        nn.init.normal_(self.net.weight, mean=0, std=1.0/config.init_noise_dim**0.5)
+        nn.init.constant_(self.net.bias, 0)
+        
 
     def forward(self, initial_noise):
         z0 = self.net(initial_noise)
@@ -173,8 +175,11 @@ class SDEReadout(nn.Module):
     def __init__(self, config: NeuralSDEConfig):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(config.latent_dim, config.output_dim),
-        )
+            nn.Linear(config.latent_dim, config.output_dim))
+
+        nn.init.normal_(self.net.weight, mean=0, std=1.0/config.init_noise_dim**0.5)
+        nn.init.constant_(self.net.bias, 0)
+        
 
     def forward(self, z):
         """
