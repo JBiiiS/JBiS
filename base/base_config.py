@@ -26,7 +26,7 @@ class BaseConfig:
     steps: int = 30           # N: steps
     rv_window: int = 10
     r: float = 0.0
-    num_epochs: int = 500
+    num_epochs: int = 1000
     learning_rate: float = 5e-5
     weight_decay: float = 1e-3   # Optimizer 설정
 
