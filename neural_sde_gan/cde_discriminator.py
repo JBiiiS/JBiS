@@ -61,13 +61,97 @@ class CDEFunc(nn.Module):
         th  = torch.cat([t_batch, h], dim=-1)               # (B, 1 + cde_hidden_dim)
         out = self.net(th)                                   # (B, cde_hidden_dim * output_dim)
         return out.view(h.size(0), self.cde_hidden_dim, self.output_dim)
+    
+    # =============================================================================
+# [2] CDEDiscriminator — full Neural CDE discriminator
+# =============================================================================
+
+class CDEDiscriminator(nn.Module):
+    """
+    Neural CDE discriminator (Kidger et al., 2021b).
+    """
+
+    def __init__(self, config: NeuralSDEConfig):
+        super().__init__()
+        self.config = config
+
+        self.cde_func  = CDEFunc(config)
+
+        # Initial hidden state — linear projection of the first observation
+        self.h0_linear = nn.Sequential(
+            nn.Linear(config.output_dim, config.cde_hidden_dim),
+            LipSwish(),
+            nn.Linear(config.cde_hidden_dim, config.cde_hidden_dim),
+            LipSwish(),
+            nn.Linear(config.cde_hidden_dim, config.cde_hidden_dim)
+        )
+
+        for m in self.h0_linear.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                nn.init.constant_(m.bias, val=0)
+
+        # Final readout — no activation
+        self.readout   = nn.Linear(config.cde_hidden_dim, 1)
+   
+
+    def forward(self, x: torch.Tensor, times: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x     : (B, steps, output_dim) — real or subsampled generated path
+            times : (steps,)               — sde_times_matched for both real and fake
+        """
+        
+        # ------------------------------------------------------------------
+        # [1] Build continuous interpolation from discrete path
+        # ------------------------------------------------------------------
+        # Linear interpolation is preferred by Kidger et al. for the CDE Discriminator 
+        # when using the torchsde backend.
+        coeffs = torchcde.linear_interpolation_coeffs(x, t=times)
+        interpolated_x = torchcde.LinearInterpolation(coeffs, t=times)
+
+        # ------------------------------------------------------------------
+        # [2] Initial hidden state from first observation
+        # ------------------------------------------------------------------
+        # Evaluate the spline exactly at the initial interval to handle batch irregularities natively
+        # interval: return  only the first and final value of 'time tensor' which was merged with coeffs when interpolation was performed.
+        x0 = interpolated_x.evaluate(interpolated_x.interval[0]) 
+        h0 = self.h0_linear(x0)                # (B, cde_hidden_dim)
+
+        # ------------------------------------------------------------------
+        # [3] Integrate CDE using the 'torchsde' backend and 'reversible_heun'
+        # ------------------------------------------------------------------
+        # 🚨 CRITICAL FIX: To use reversible_heun on a CDE, you MUST specify backend='torchsde'.
+        # Furthermore, you must explicitly pass the spline coefficients (coeffs) into 
+        # adjoint_params so the solver knows how to reconstruct the path backward in time.
+        
+        h = torchcde.cdeint(
+            X              = interpolated_x,
+            func           = self.cde_func,
+            z0             = h0,
+            t              = interpolated_x.interval, # [t_start, t_end]
+            method         = 'reversible_heun',       # The exact-gradient SDE algorithm
+            backend        = 'torchsde',              # Switch from torchdiffeq (ODE) to torchsde (SDE)
+            dt             = times[1] - times[0],          # Reversible solvers require a fixed dt (e.g., 1.0). assume that the interval of time tensor is invariant.
+            adjoint_method = 'adjoint_reversible_heun',
+            adjoint_params = (coeffs,) + tuple(self.cde_func.parameters()) # Expose path to adjoint
+        )                              
+        # Output shape: (B, 2, cde_hidden_dim)
+
+        # ------------------------------------------------------------------
+        # [4] Readout from final hidden state h(T)
+        # ------------------------------------------------------------------
+        h_T   = h[:, -1, :]                            # (B, cde_hidden_dim)
+        score = self.readout(h_T)                      # (B, 1)
+        
+        return score
 
 
 # =============================================================================
 # [2] CDEDiscriminator — full Neural CDE discriminator
 # =============================================================================
 
-class CDEDiscriminator(nn.Module):
+class CDEDiscriminatorwithGP(nn.Module):
     """
     Neural CDE discriminator (Kidger et al., 2021).
 
@@ -114,6 +198,7 @@ class CDEDiscriminator(nn.Module):
 
         # Final readout — no activation
         self.readout   = nn.Linear(config.cde_hidden_dim, 1)
+
 
     def forward(self, x: torch.Tensor, times: torch.Tensor) -> torch.Tensor:
         """
