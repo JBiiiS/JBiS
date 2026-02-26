@@ -4,6 +4,12 @@ import torchcde #type:ignore
 from neural_sde_gan.neural_sde_config import NeuralSDEConfig
 
 
+class LipSwish(torch.nn.Module):
+    def forward(self, x):
+        return 0.909 * torch.nn.functional.silu(x)
+
+
+
 # =============================================================================
 # [1] CDE Vector Field  f_φ(t, h)
 # =============================================================================
@@ -30,9 +36,9 @@ class CDEFunc(nn.Module):
 
         self.net = nn.Sequential(
             nn.Linear(config.cde_hidden_dim + 1, config.cde_hidden_dim),  # +1 for time
-            nn.Softplus(),
+            LipSwish(),
             nn.Linear(config.cde_hidden_dim, config.cde_hidden_dim),
-            nn.Softplus(),
+            LipSwish(),
             # Output: one row per hidden unit, one column per input channel
             nn.Linear(config.cde_hidden_dim, config.cde_hidden_dim * config.output_dim),
             nn.Tanh()
@@ -95,9 +101,18 @@ class CDEDiscriminator(nn.Module):
         self.cde_func  = CDEFunc(config)
 
         # Initial hidden state — linear projection of the first observation
-        self.h0_linear = nn.Linear(config.output_dim, config.cde_hidden_dim)
+        self.h0_linear = nn.Sequential(nn.Linear(config.output_dim, config.cde_hidden_dim),
+                                       LipSwish(),
+                                       nn.Linear(config.cde_hidden_dim, config.cde_hidden_dim),
+                                       LipSwish(),
+                                       nn.Linear(config.cde_hidden_dim, config.cde_hidden_dim)
+        )
+        for m in self.net.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                nn.init.constant_(m.bias, val=0)
 
-        # Final readout — no activation (WGAN critic must be unconstrained)
+        # Final readout — no activation
         self.readout   = nn.Linear(config.cde_hidden_dim, 1)
 
     def forward(self, x: torch.Tensor, times: torch.Tensor) -> torch.Tensor:
@@ -116,7 +131,7 @@ class CDEDiscriminator(nn.Module):
         # ------------------------------------------------------------------
 
         coeffs = torchcde.linear_interpolation_coeffs(x, t=times)
-        spline = torchcde.LinearInterpolation(coeffs, t=times)
+        intepolated_x = torchcde.LinearInterpolation(coeffs, t=times)
 
         '''
         coeffs = torchcde.natural_cubic_spline_coeffs(x, t=times)
@@ -134,12 +149,13 @@ class CDEDiscriminator(nn.Module):
         # ------------------------------------------------------------------
         t_eval = times[[0, -1]]                         # (2,)  →  [0, T]
         h = torchcde.cdeint(
-            X       = spline,
+            X       = intepolated_x,
             func    = self.cde_func,
             z0      = h0,
             t       = t_eval,
             method  = 'rk4',
-            adjoint = False
+            adjoint = True,
+            adjoint_method = self.config.adjoint_method
         )                              
         # (B, 2, cde_hidden_dim)
 

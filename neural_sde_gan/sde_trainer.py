@@ -132,5 +132,35 @@ def _step_G(
 
     return g_loss.item()
 
+def _step_wo_gp(model : NeuralSDEGAN, real_x : torch.Tensor, opt_d : torch.optim.Optimizer, opt_g :  torch.optim.Optimizer):
+    model.train()
+    opt_d.zero_grad()
+    opt_g.zero_grad()
 
-#
+    _, fake_x = model.generate()
+    fake_score = model.discriminate(fake_x)   
+
+    real_score = model.discriminate(real_x)
+    
+    loss = fake_score.mean() - real_score.mean()
+
+    loss.backward()
+
+    for params in model.generator.parameters():
+        if params.grad is not None:
+            params.grad *= -1
+
+    opt_d.step()
+    opt_g.step()
+    opt_d.zero_grad()
+    opt_g.zero_grad()
+
+    with torch.no_grad():
+        for module in model.discriminator.modules():
+            if isinstance(module, nn.Linear):
+                # constrainting L1 norm <= 1
+                lim = 1.0 / module.out_features 
+                module.weight.clamp_(-lim, lim)
+
+    return fake_score.mean().item(), real_score.mean().item()
+

@@ -4,6 +4,10 @@ import torchsde # type: ignore
 from torchsde import BrownianInterval #type:ignore
 from neural_sde_gan.neural_sde_config import NeuralSDEConfig
 
+class LipSwish(torch.nn.Module):
+    def forward(self, x):
+        return 0.909 * torch.nn.functional.silu(x)
+
 
 # [0} Generating Noise
 class NoiseEmbedder(nn.Module):
@@ -11,10 +15,18 @@ class NoiseEmbedder(nn.Module):
         super().__init__()
 
 
-        self.net = nn.Linear(config.init_noise_dim, config.latent_dim)
-        nn.init.normal_(self.net.weight, mean=0, std=1.0/config.init_noise_dim**0.5)
-        nn.init.constant_(self.net.bias, 0)
-        
+        self.net= nn.Sequential(nn.Linear(config.init_noise_dim, config.latent_dim),
+        LipSwish(),
+        nn.Linear(config.latent_dim, config.latent_dim),
+        LipSwish(),
+        nn.Linear(config.latent_dim, config.latent_dim))
+
+
+        for m in self.net.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                nn.init.constant_(m.bias, val=0)
+            
 
     def forward(self, initial_noise):
         z0 = self.net(initial_noise)
@@ -40,18 +52,18 @@ class SDEDrift(nn.Module):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(config.latent_dim + 1, config.sde_hidden_dim),  # +1 for time
-            nn.Softplus(),
+            LipSwish(),
             nn.Linear(config.sde_hidden_dim, config.sde_hidden_dim),
-            nn.Softplus(),
+            LipSwish(),
             nn.Linear(config.sde_hidden_dim, config.latent_dim),
             nn.Tanh()
         )
-        # Small weight init for numerical stability (same convention as ODEFunc)
+
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
                 nn.init.constant_(m.bias, val=0)
-
+            
     def forward(self, t, z):
         """
         Args:
@@ -67,7 +79,7 @@ class SDEDrift(nn.Module):
         t_batch = torch.full((z.size(0), 1), float(t), device=z.device, dtype=z.dtype)
         tz = torch.cat([t_batch, z], dim=-1)   # (B, 1 + latent_dim)
         out = self.net(tz)
-        return torch.tanh(out + z)
+        return out
 
 
 # =============================================================================
@@ -97,12 +109,13 @@ class SDEDiffusion(nn.Module):
 
         self.net = nn.Sequential(
             nn.Linear(config.latent_dim + 1, config.sde_hidden_dim),
-            nn.Softplus(),
+            LipSwish(),
             nn.Linear(config.sde_hidden_dim, config.sde_hidden_dim),
-            nn.Softplus(),
+            LipSwish(),
             nn.Linear(config.sde_hidden_dim, config.latent_dim * config.noise_dim),
             nn.Tanh()
         )
+
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
@@ -118,12 +131,14 @@ class SDEDiffusion(nn.Module):
 
 
         0225 revision: introducing skip connection structure to stop gradient vanishing
+
+        0226 rev: Discarding the 0225 structure
         """
         t_batch = torch.full((z.size(0), 1), float(t), device=z.device, dtype=z.dtype)
         tz = torch.cat([t_batch, z], dim=-1)
         out = self.net(tz)  
         out = out.view(z.size(0), self.latent_dim, self.noise_dim)                                             # (B, latent_dim * noise_dim)
-        return torch.tanh(out + z.unsqueeze(-1))   # (B, latent_dim, noise_dim)
+        return out
 
 
 # =============================================================================
@@ -140,9 +155,8 @@ class _SDE(nn.Module):
         .f(t, y)    : drift,     t is a 0-dim scalar tensor when it is taken as input
         .g(t, y)    : diffusion, t is a 0-dim scalar tensor when it is taken as input
     """
-    noise_type = NeuralSDEConfig.noise_type # Default: Diagonal
-    # Presume the residual noise is independent to each other
-    sde_type   = NeuralSDEConfig.sde_type # For Satisfying Martingale Property
+    noise_type = NeuralSDEConfig.noise_type # 
+    sde_type   = NeuralSDEConfig.sde_type 
 
     def __init__(self, drift: SDEDrift, diffusion: SDEDiffusion):
         super().__init__()
@@ -173,9 +187,11 @@ class SDEReadout(nn.Module):
 
     def __init__(self, config: NeuralSDEConfig):
         super().__init__()
-        self.net = nn.Linear(config.latent_dim, config.output_dim)
-        nn.init.normal_(self.net.weight, mean=0, std=1.0/config.init_noise_dim**0.5)
-        nn.init.constant_(self.net.bias, 0)
+        self.linear = nn.Linear(config.latent_dim, config.output_dim)
+
+        nn.init.normal_(self.linear.weight, mean=0, std=1.0/config.latent_dim**0.5)
+        nn.init.constant_(self.linear.bias, 0)
+
         
 
     def forward(self, z):
@@ -185,7 +201,7 @@ class SDEReadout(nn.Module):
         Returns:
             x : (B, T_fine, output_dim)
         """
-        return self.net(z)
+        return self.linear(z)
 
 
 # =============================================================================
@@ -256,12 +272,12 @@ class SDEGenerator(nn.Module):
         z0 = self.embedder(init_noise)
 
         bm = BrownianInterval(
-        t0        = ts[0],
-        t1        = ts[-1],
-        size      = (batch_size, self.config.noise_dim),
-        device    = self.config.device,
-        levy_area_approximation = 'none'  # 속도 향상
-    )
+            t0=ts[0],
+            t1=ts[-1],
+            size=(batch_size, self.config.noise_dim),
+            device=self.config.device,
+            levy_area_approximation='none'
+        )
 
 
         # torchsde.sdeint returns (T_fine, B, latent_dim)
@@ -271,6 +287,7 @@ class SDEGenerator(nn.Module):
             ts     = ts,
             bm     = bm,
             method = self.config.sde_method,
+            adjoint_method = self.config.adjoint_method
         )                                                      # (T_fine, B, latent_dim)
 
         z_path = z_path.permute(1, 0, 2)                      # (B, T_fine, latent_dim)

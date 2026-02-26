@@ -41,7 +41,7 @@ class NeuralSDEConfig(BaseConfig):
 
     # Hidden state dimension of the CDE: h_t ∈ R^{cde_hidden_dim}.
     # The CDE vector field maps (t, h_t) → R^{cde_hidden_dim × output_dim}.
-    cde_hidden_dim: int = 128
+    cde_hidden_dim: int = 64
 
     # ----------------------------------
     # [6] SDE Solver Settings
@@ -52,7 +52,8 @@ class NeuralSDEConfig(BaseConfig):
     # 'euler'     : Euler-Maruyama  (fast, first-order, good for training)
     # 'milstein'  : Milstein        (second-order, slightly more accurate)
     # 'srk'       : Stochastic RK   (higher-order, slower)
-    sde_method: str = 'midpoint'
+    sde_method: str = 'reversible_heun'
+    adjoint_method: str = 'adjoint_reversible_heun'
 
     # ----------------------------------
     # [7] WGAN-GP Training Settings
@@ -60,8 +61,13 @@ class NeuralSDEConfig(BaseConfig):
 
     # Number of discriminator (critic) update steps per generator step.
     # Standard WGAN-GP uses 5 for D.
-    epoch_for_D: int = 5
+    epoch_for_D: int = 1
     epoch_for_G: int = 1
+
+    lr_d: float = 1e-4
+    lr_g: float = 2e-5
+
+    swa_start_epoch: int = 500
 
     # Gradient penalty coefficient λ in:
     # L_D = E[D(fake)] - E[D(real)] + gp_lambda * GP
