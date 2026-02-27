@@ -45,7 +45,7 @@ class CDEFunc(nn.Module):
         )
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, mean=0, std=0.01)
+                nn.init.xavier_uniform_(m.weight)
                 nn.init.constant_(m.bias, val=0)
 
     def forward(self, t, h):
@@ -93,6 +93,10 @@ class CDEDiscriminator(nn.Module):
 
         # Final readout — no activation
         self.readout   = nn.Linear(config.cde_hidden_dim, 1)
+        for m in self.readout.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                nn.init.constant_(m.bias, val=0)
    
 
     def forward(self, x: torch.Tensor, times: torch.Tensor) -> torch.Tensor:

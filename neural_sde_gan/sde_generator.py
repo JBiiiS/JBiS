@@ -270,7 +270,7 @@ class SDEGenerator(nn.Module):
 
         # z0 : (b, latent_dim)
         z0 = self.embedder(init_noise)
-
+        '''
         bm = BrownianInterval(
             t0=ts[0],
             t1=ts[-1],
@@ -278,14 +278,15 @@ class SDEGenerator(nn.Module):
             device=self.config.device,
             levy_area_approximation='none'
         )
-
+        '''
 
         # torchsde.sdeint returns (T_fine, B, latent_dim)
         z_path = torchsde.sdeint_adjoint(
             self._sde,
             y0     = z0,
             ts     = ts,
-            bm     = bm,
+            # bm     = bm,
+            dt = ts[1] - ts[0],
             method = self.config.sde_method,
             adjoint_method = self.config.adjoint_method
         )                                                      # (T_fine, B, latent_dim)
