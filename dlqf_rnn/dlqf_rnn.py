@@ -213,7 +213,7 @@ def train_dlqf(
             break
 
     # 본격 학습
-    for epoch in range(config.n_epochs):
+    for epoch in range(config.num_epochs):
         model.train()
         epoch_loss = 0.0
 
