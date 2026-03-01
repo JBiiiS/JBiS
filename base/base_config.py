@@ -7,9 +7,6 @@ class BaseConfig:
     # ----------------------------------
     # [1] 공통 환경 설정 (Environment)
     # ----------------------------------
-    project_name: str
-    experiment_name: str 
-
     seed: int = 42
     
     # device는 저장(Serialization)을 위해 str로 관리하고,
