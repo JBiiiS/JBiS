@@ -275,11 +275,10 @@ class DeepHedgingModelTransformerViz(nn.Module):
             # attn_output: (Batch, Seq_Len, d_model)
             # attn_weights: (Batch, Seq_Len, Seq_Len) -> 이게 바로 Attention Map!
             attn_output, attn_weights = self.mha(final_inputs, final_inputs, final_inputs, need_weights=True)
-            #전자가 Z(20000,sz_times,64), 후자가 A(20000,sz_times,sz_times)
-
+            
             # Residual Connection + LayerNorm
-            #final_inputs로 미분될 때 gradient vanishing 방지를 위해
-            # (예컨대 final_inputs로 가는 bias)
+            # final_inputs로 미분될 때 gradient vanishing 방지를 위해
+            # skip connection
             x_sub = self.norm1(final_inputs + attn_output)
 
             # (3) Feed Forward
@@ -343,7 +342,7 @@ class DeepHedgingModelTransformer(nn.Module):
         # D2는 말그대로 고차원으로 걍 한번 projection 해주는 역할
 
         encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=d_model*4, batch_first=True)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers) #financial scene 에선 under/overfitting 방지를 위해 2~3 정도
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers) 
 
         # 5. 출력 레이어
         self.fc = nn.Linear(d_model, output_dim)

@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from base.base_config import BaseConfig  # Assuming your previous code is in base_config.py
 
 @dataclass

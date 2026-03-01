@@ -29,6 +29,7 @@ class BaseConfig:
     num_epochs: int = 1000
     learning_rate: float = 5e-5
     weight_decay: float = 1e-3   # Optimizer 설정
+    dropout: float = 0.1
 
     
     # ----------------------------------
