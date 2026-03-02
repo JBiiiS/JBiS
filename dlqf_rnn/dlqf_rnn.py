@@ -68,6 +68,7 @@ class NQF(nn.Module):
         self.layers = nn.ModuleList(layers).to(config.device)
 
         self.activation = nn.Tanh()
+        self.activation_final = nn.Softplus()
 
     def forward(self, h: torch.Tensor, alpha: torch.Tensor) -> torch.Tensor:
         """
@@ -82,6 +83,8 @@ class NQF(nn.Module):
             x = torch.nn.functional.linear(x, weight_sq, layer.bias)
             if i < len(self.layers) - 1:
                 x = self.activation(x)
+            else:
+                x = self.activation_final(x)
 
         return x  # (B, 1)
 
