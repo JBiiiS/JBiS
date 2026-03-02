@@ -82,7 +82,7 @@ class NQF(nn.Module):
             weight_sq = layer.weight ** 2   # 단조증가 보장
             x = torch.nn.functional.linear(x, weight_sq, layer.bias)
             if i < len(self.layers) - 1:
-                x = self.activation(x)
+                x = self.activation(x) * 3
             else:
                 x = self.activation_final(x)
 
