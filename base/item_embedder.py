@@ -7,7 +7,7 @@ import numpy as np
 # Item Embedding Layer
 # ═══════════════════════════════════════════════════════════════
 
-class ItemEmbedding(nn.Module):
+class ItemEmbedder(nn.Module):
     """
     Learnable embedding for stock identifiers.
 
@@ -18,7 +18,7 @@ class ItemEmbedding(nn.Module):
         embedding_dim: output vector dimension 
 
     Usage:
-        embedder = ItemEmbedding(num_items=3, embedding_dim=1)
+        embedder = ItemEmbedder(num_items=3, embedding_dim=1)
         ids      = torch.tensor([0, 0, 1, 2])   # stock IDs
         out      = embedder(ids)                 # shape: (4, 1)
     """
@@ -59,7 +59,7 @@ class ItemEmbedding(nn.Module):
             integer stock ID
 
         Example:
-            ItemEmbedding.id_from_ticker('SPY')  # → 0
+            ItemEmbedder.id_from_ticker('SPY')  # → 0
         """
         ticker = ticker.upper()
         if ticker not in cls.STOCK_MAP:
@@ -80,6 +80,6 @@ class ItemEmbedding(nn.Module):
             stock_id: integer ID (must be < num_items)
 
         Example:
-            ItemEmbedding.register_ticker('TSLA', 3)
+            ItemEmbedder.register_ticker('TSLA', 3)
         """
         cls.STOCK_MAP[ticker.upper()] = stock_id
