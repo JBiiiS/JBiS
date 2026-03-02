@@ -68,7 +68,7 @@ class NQF(nn.Module):
         self.layers = nn.ModuleList(layers).to(config.device)
 
         self.activation = nn.Tanh()
-        self.activation_final = nn.Softplus()
+        self.activation_final = nn.Sigmoid()
 
     def forward(self, h: torch.Tensor, alpha: torch.Tensor) -> torch.Tensor:
         """
