@@ -203,11 +203,11 @@ def log_data(data):
     return ln_price, ln_price_diff
 
 class To_TensorSet:
-    def __init__(self, config):
-        self.t = config.steps       
-        self.d = config.num_assets  
+    def __init__(self, t: int, d: int, ):
+        self.t = t     
+        self.d = d
         
-    def process(self, data, init_shuffle = False):
+    def process(self, data, require_val_set = False, num_val_tensors = None, require_test_set = False, num_test_tensors = None, init_shuffle = False):
         # 1. 데이터 타입 체크 및 (Total_Time, D) 형태로 통일
         # -------------------------------------------------------------------------
         # [수정] torch.Tensor 입력 처리 추가
@@ -245,6 +245,7 @@ class To_TensorSet:
         else:
             raise ValueError("Please check the input.")
 
+
         # Asset 개수 검증
         L, current_d = raw_data.shape
         if current_d != self.d:
@@ -258,29 +259,64 @@ class To_TensorSet:
 
         cutoff = num_samples * self.t
         trimmed_data = raw_data[:cutoff] 
-        # (N, T, D) 형태의 텐서 생성
+        # Generating Tensor whose shape = (N, T, D) 
         tensor_data = torch.tensor(trimmed_data, dtype=torch.float32).view(num_samples, self.t, self.d)
 
-        # 3. Train / Test Split
-        # 마지막 1개 윈도우는 Test, 나머지는 Train
-        test_set_btd = tensor_data[-1:]   # (1, T, D)
-        train_set_btd = tensor_data[:-1]  # (N-1, T, D)
-    
+
+        # 3. Train / Val / Test Split
+
+
+        if require_val_set and require_test_set:   
+
+            test_set_btd = tensor_data[-num_test_tensors:]   
+            validation_set_btd = tensor_data[-(num_test_tensors + num_val_tensors):-num_test_tensors]
+            train_set_btd = tensor_data[:-(num_test_tensors + num_val_tensors)]
+
+        elif require_val_set and require_test_set == False:   
+            
+            validation_set_btd = tensor_data[-num_val_tensors:]
+            train_set_btd = tensor_data[:-num_val_tensors]
+
+        elif require_val_set==False and require_test_set: 
+
+            test_set_btd = tensor_data[-num_test_tensors:]   
+            train_set_btd = tensor_data[:-num_test_tensors]
+
+        else:
+            train_set_btd = tensor_data
+        
+        
         # 4. Shuffle (Train set only, if wanted)
         if init_shuffle == True:
             indices = torch.randperm(train_set_btd.size(0))
             train_set_btd = train_set_btd[indices]
         
-        train_set_bdt = train_set_btd.permute(0, 2, 1) # (N, D, T)
-        test_set_bdt = test_set_btd.permute(0, 2, 1) # (1, D, T)
+        train_set_bdt = train_set_btd.permute(0, 2, 1)
 
-        return {
+        test_set_bdt = test_set_btd.permute(0, 2, 1) if require_test_set else None
+
+        validation_set_bdt = validation_set_btd.permute(0, 2, 1) if require_val_set else None
+
+
+        result =  {
             'train': {
                 'BTD': train_set_btd, # List of Tensors (가변 배치)
                 'BDT': train_set_bdt, # List of Tensors (가변 배치) 
-            },
-            'test': {
-                'BTD': test_set_btd,
-                'BDT': test_set_bdt
             }
         }
+
+
+        if require_val_set:
+            result['val'] =   {
+                'BTD': validation_set_btd,
+                'BDT': validation_set_bdt
+            }               
+
+
+        if require_test_set:
+            result['test'] =  {
+                'BTD': test_set_btd,
+                'BDT': test_set_bdt 
+            } 
+
+        return result

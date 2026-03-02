@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from nqf_rnn_config import NQFRNNConfig
+from .nqf_rnn_config import NQFRNNConfig
 from torch.utils.data import DataLoader, TensorDataset
 
 # ─────────────────────────────────────────

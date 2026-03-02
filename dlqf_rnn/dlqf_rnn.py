@@ -44,7 +44,7 @@ class BiLSTMEncoder(nn.Module):
         """
         lstm_output, _ = self.bilstm(x)       # (B, T, hidden_dim * 2)
         h_last = lstm_output[:, -1, :]        # (B, hidden_dim * 2)
-        # Because the bidirection is activated, h_t is composed of alternating h_t of each direction such as forward -> backward -> forward -> ..., so that h_t[-1] isn't consolidated form, but only h_t of final backward lstm, while h[:, -1, :] contains automatically concatenated shape([b, 2h])
+        # Because the bidirection is activated, h_t is composed of alternating h_t of each direction such as forward -> backward -> forward -> ..., so that h_t[-1] isn't consolidated form, but only h_t of final backward lstm, while h[:, -1, :] contains  concatenated shape([b, 2h]) automatically
 
         return h_last
 
