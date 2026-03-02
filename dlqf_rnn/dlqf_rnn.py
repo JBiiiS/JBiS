@@ -61,10 +61,10 @@ class NQF(nn.Module):
         # BiLSTM output이 hidden_dim * 2
         in_dim = config.hidden_dim * 2
 
-        layers = [nn.Linear(in_dim + 1, config.latent_dim)]
-        layers += [nn.Linear(config.latent_dim, config.latent_dim)
-                   for _ in range(config.num_layers_nqf - 1)]
-        layers += [nn.Linear(config.latent_dim, 1)]
+        layers = [nn.Linear(in_dim + 1, config.latent_dim_1)]
+        layers += [nn.Linear(config.latent_dim_1, config.latent_dim_2)]
+        layers += [nn.Linear(config.latent_dim_2, config.latent_dim_3)]
+        layers += [nn.Linear(config.latent_dim_3, 1)]
         self.layers = nn.ModuleList(layers).to(config.device)
 
         self.activation = nn.Tanh()
