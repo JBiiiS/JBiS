@@ -202,6 +202,12 @@ def log_data(data):
     
     return ln_price, ln_price_diff
 
+
+
+
+
+
+
 class To_TensorSet:
     def __init__(self, t: int, d: int, ):
         self.t = t     
