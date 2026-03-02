@@ -7,7 +7,7 @@ from base.base_config import BaseConfig
 class DLQFRNNConfig(BaseConfig):
     num_assets: int = 1
 
-    input_dim: int = 4 # [log return, RV, volume, ID]
+    input_dim: int = 6 # [log return, RV, volume, (ID), time: weekly, monthly, quarterly]
 
     num_layers_lstm: int = 3
     num_layers_nqf: int = 3
