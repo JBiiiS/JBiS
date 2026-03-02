@@ -68,7 +68,7 @@ class NQF(nn.Module):
         self.layers = nn.ModuleList(layers).to(config.device)
 
         self.activation = nn.Tanh()
-        self.activation_final = nn.Softplus()
+        self.activation_final = nn.LeakyReLU()
 
     def forward(self, h: torch.Tensor, alpha: torch.Tensor) -> torch.Tensor:
         """
@@ -82,7 +82,7 @@ class NQF(nn.Module):
             weight_sq = layer.weight ** 2   # 단조증가 보장
             x = torch.nn.functional.linear(x, weight_sq, layer.bias)
             if i < len(self.layers) - 1:
-                x = self.activation(x) * 3
+                x = self.activation(x) 
             else:
                 x = self.activation_final(x)
 
