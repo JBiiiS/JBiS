@@ -48,7 +48,7 @@ class BiLSTMEncoder(nn.Module):
 #    Encoder(BiLSTM) + Decoder(SDE)
 # ─────────────────────────────────────────
 class DLQFRNNWithSDE(nn.Module):
-    def __init__(self, config: DLQFRNNWithSDEConfig, SDEGenerator: SDEGenerator):
+    def __init__(self, config: DLQFRNNWithSDEConfig):
         super().__init__()
         self.config = config
 
@@ -57,7 +57,7 @@ class DLQFRNNWithSDE(nn.Module):
         self.encoder = BiLSTMEncoder(config).to(config.device)
       
         
-        self.SDEGenerator = SDEGenerator(config)
+        self.SDEGenerator =  SDEGenerator(config)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
