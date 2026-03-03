@@ -34,7 +34,7 @@ class SDEDrift(nn.Module):
             nn.Linear(config.sde_hidden_dim, config.sde_hidden_dim),
             LipSwish(),
             nn.Linear(config.sde_hidden_dim, config.lstm_hidden_dim * 2),
-            nn.Tanh()
+            nn.Softplus()
         )
 
         for m in self.net.modules():
