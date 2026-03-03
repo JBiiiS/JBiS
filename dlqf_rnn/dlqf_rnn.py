@@ -85,7 +85,7 @@ class NQF(nn.Module):
                 x = self.activation(x)  # Tanh for intermediate layers
             # No activation on final layer—output is log-space
     
-        return torch.exp(x)  # Exponential ensures non-negativity
+        return torch.exp(x) / 10  # Exponential ensures non-negativity
 
 
 # ─────────────────────────────────────────
