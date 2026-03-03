@@ -131,6 +131,7 @@ class _SDE(nn.Module):
     def __init__(self, drift: SDEDrift, diffusion: SDEDiffusion, config: DLQFRNNWithSDEConfig):
 
         super().__init__()
+        self.config = config
 
         self.noise_type = config.noise_type
         self.sde_type = config.sde_type
@@ -193,7 +194,7 @@ class SDEGenerator(nn.Module):
 
         self.drift     = SDEDrift(config)
         self.diffusion = SDEDiffusion(config)
-        self._sde      = _SDE(self.drift, self.diffusion)
+        self._sde      = _SDE(self.drift, self.diffusion, self.config)
         self.readout   = SDEReadout(config)
 
 
