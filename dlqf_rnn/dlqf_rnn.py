@@ -58,6 +58,9 @@ class NQF(nn.Module):
     def __init__(self, config: DLQFRNNConfig):
         super().__init__()
 
+        self.config = config
+        self.exp_deno = config.exp_deno
+
         # BiLSTM output이 hidden_dim * 2
         in_dim = config.hidden_dim * 2
 
@@ -85,7 +88,7 @@ class NQF(nn.Module):
                 x = self.activation(x)  # Tanh for intermediate layers
             # No activation on final layer—output is log-space
     
-        return torch.exp(x) / 5  # Exponential ensures non-negativity
+        return torch.exp(x) / self.exp_deno  # Exponential ensures non-negativity
 
 
 # ─────────────────────────────────────────
