@@ -68,8 +68,7 @@ class NQF(nn.Module):
         self.layers = nn.ModuleList(layers).to(config.device)
 
         self.activation = nn.Tanh()
-        self.activation_final = nn.ReLU()
-
+        
     def forward(self, h: torch.Tensor, alpha: torch.Tensor) -> torch.Tensor:
         """
         h     : (B, hidden_dim * 2)
@@ -79,14 +78,14 @@ class NQF(nn.Module):
         x = torch.cat([h, alpha.unsqueeze(-1)], dim=-1)
 
         for i, layer in enumerate(self.layers):
-            weight_sq = layer.weight ** 2   # 단조증가 보장
+            weight_sq = layer.weight ** 2   # Monotonicity preserved throughout
             x = torch.nn.functional.linear(x, weight_sq, layer.bias)
+            
             if i < len(self.layers) - 1:
-                x = self.activation(x) 
-            else:
-                x = self.activation_final(x)
-
-        return x  # (B, 1)
+                x = self.activation(x)  # Tanh for intermediate layers
+            # No activation on final layer—output is log-space
+    
+        return torch.exp(x)  # Exponential ensures non-negativity
 
 
 # ─────────────────────────────────────────
