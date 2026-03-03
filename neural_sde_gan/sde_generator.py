@@ -155,8 +155,8 @@ class _SDE(nn.Module):
         .f(t, y)    : drift,     t is a 0-dim scalar tensor when it is taken as input
         .g(t, y)    : diffusion, t is a 0-dim scalar tensor when it is taken as input
     """
-    noise_type = NeuralSDEConfig.noise_type # 
-    sde_type   = NeuralSDEConfig.sde_type 
+    noise_type = NeuralSDEConfig().noise_type # 
+    sde_type   = NeuralSDEConfig().sde_type 
 
     def __init__(self, drift: SDEDrift, diffusion: SDEDiffusion):
         super().__init__()

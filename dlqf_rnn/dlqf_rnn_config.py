@@ -13,10 +13,10 @@ class DLQFRNNConfig(BaseConfig):
     num_layers_nqf: int = 3
 
 
-    hidden_dim: int = 64 #lstm  dimension
-    latent_dim_1: int = 32 
-    latent_dim_2: int = 16
-    latent_dim_3: int = 8 
+    hidden_dim: int = 16 #lstm  dimension
+    latent_dim_1: int = 16 
+    latent_dim_2: int = 8
+    latent_dim_3: int = 4 
 
     exp_deno_init: float = 8.5
     use_learnable_exp: bool = False
