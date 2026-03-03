@@ -59,14 +59,14 @@ class NQF(nn.Module):
         super().__init__()
 
         self.config = config
+
         self.exp_deno_init = config.exp_deno_init
-        #Alternative: Learnable temperature scaling
+
         self.temperature_learnable = nn.Parameter(torch.tensor(self.exp_deno_init))
 
         self.temperature_non_learnable = torch.tensor(self.exp_deno_init)
 
-
-        # BiLSTM output이 hidden_dim * 2
+        # BiLSTM output size =  hidden_dim * 2
         in_dim = config.hidden_dim * 2
 
         layers = [nn.Linear(in_dim + 1, config.latent_dim_1)]
@@ -100,7 +100,7 @@ class NQF(nn.Module):
         elif use_non_learnable_exp:
             return torch.exp(x) / torch.abs(self.temperature_non_learnable)
         # Exponential ensures non-negativity
-        
+
         else:
             return x 
 
@@ -113,6 +113,11 @@ class DLQFRNN(nn.Module):
     def __init__(self, config: DLQFRNNConfig):
         super().__init__()
         self.config = config
+
+
+        self.use_learnable_exp = config.use_learnable_exp
+        self.use_non_learnable_exp = config.use_non_learnable_exp
+
 
         self.encoder = BiLSTMEncoder(config).to(config.device)
         self.nqf = NQF(config).to(config.device)
@@ -133,7 +138,11 @@ class DLQFRNN(nn.Module):
         # alpha: (M,) → (B*M,)
         a_rep = alpha.unsqueeze(0).expand(B, M).reshape(B * M)
 
-        r_q = self.nqf(h_rep, a_rep)           # (B*M, 1)
+        r_q = self.nqf(h_rep, a_rep, 
+                       use_learnable_exp = self.use_learnable_exp, 
+                       use_non_learnable_exp = self.use_non_learnable_exp)           # (B*M, 1)
+
+
         r_q = r_q.squeeze(-1).reshape(B, M)    # (B, M)
         h_detached = h.detach()
 

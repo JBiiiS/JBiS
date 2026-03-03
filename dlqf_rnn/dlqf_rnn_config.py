@@ -19,7 +19,8 @@ class DLQFRNNConfig(BaseConfig):
     latent_dim_3: int = 8 
 
     exp_deno_init: float = 8.5
-
+    use_learnable_exp: bool = False
+    use_non_learnable_exp: bool = False
 
     total_quantile: int = 78   # 하루 5분 수익률 개수 (390분 / 5분)
     input_len: int = 66
