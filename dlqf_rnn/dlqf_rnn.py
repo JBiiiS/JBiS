@@ -59,7 +59,11 @@ class NQF(nn.Module):
         super().__init__()
 
         self.config = config
-        self.exp_deno = config.exp_deno
+        self.exp_deno_init = config.exp_deno_init
+        #Alternative: Learnable temperature scaling
+        self.temperature = nn.Parameter(torch.tensor(self.exp_deno_init))
+
+
 
         # BiLSTM output이 hidden_dim * 2
         in_dim = config.hidden_dim * 2
@@ -88,8 +92,8 @@ class NQF(nn.Module):
                 x = self.activation(x)  # Tanh for intermediate layers
             # No activation on final layer—output is log-space
     
-        return torch.exp(x) / self.exp_deno  # Exponential ensures non-negativity
-
+        return torch.exp(x) / torch.abs(self.temperature) 
+# Exponential ensures non-negativity
 
 # ─────────────────────────────────────────
 # 3. DLQF 전체 모델

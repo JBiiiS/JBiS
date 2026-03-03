@@ -18,7 +18,7 @@ class DLQFRNNConfig(BaseConfig):
     latent_dim_2: int = 16
     latent_dim_3: int = 8 
 
-    exp_deno: float = 5.0
+    exp_deno_init: float = 8.5
 
 
     total_quantile: int = 78   # 하루 5분 수익률 개수 (390분 / 5분)
