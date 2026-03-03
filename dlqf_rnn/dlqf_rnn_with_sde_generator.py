@@ -90,7 +90,6 @@ class SDEDiffusion(nn.Module):
             nn.Linear(config.sde_hidden_dim, config.sde_hidden_dim),
             LipSwish(),
             nn.Linear(config.sde_hidden_dim, config.lstm_hidden_dim * 2 * config.noise_dim),
-            nn.Softplus()
             
         )
 
@@ -112,7 +111,7 @@ class SDEDiffusion(nn.Module):
         tz = torch.cat([t_batch, z], dim=-1)
         out = self.net(tz)  
         out = out.view(z.size(0), self.lstm_hidden_dim * 2, self.noise_dim)                                             # (B, lstm_hidden_dim * 2 * noise_dim)
-        return out
+        return torch.abs(out)
 
 
 # =============================================================================
