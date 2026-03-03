@@ -61,8 +61,9 @@ class NQF(nn.Module):
         self.config = config
         self.exp_deno_init = config.exp_deno_init
         #Alternative: Learnable temperature scaling
-        self.temperature = nn.Parameter(torch.tensor(self.exp_deno_init))
+        self.temperature_learnable = nn.Parameter(torch.tensor(self.exp_deno_init))
 
+        self.temperature_non_learnable = torch.tensor(self.exp_deno_init)
 
 
         # BiLSTM output이 hidden_dim * 2
@@ -76,7 +77,7 @@ class NQF(nn.Module):
 
         self.activation = nn.Tanh()
         
-    def forward(self, h: torch.Tensor, alpha: torch.Tensor) -> torch.Tensor:
+    def forward(self, h: torch.Tensor, alpha: torch.Tensor, use_learnable_exp = False, use_non_learnable_exp = False) -> torch.Tensor:
         """
         h     : (B, hidden_dim * 2)
         alpha : (B,)
@@ -91,9 +92,18 @@ class NQF(nn.Module):
             if i < len(self.layers) - 1:
                 x = self.activation(x)  # Tanh for intermediate layers
             # No activation on final layer—output is log-space
-    
-        return torch.exp(x) / torch.abs(self.temperature) 
-# Exponential ensures non-negativity
+
+        if use_learnable_exp:
+            return torch.exp(x) / torch.abs(self.temperature_learnable) 
+        # Exponential ensures non-negativity
+
+        elif use_non_learnable_exp:
+            return torch.exp(x) / torch.abs(self.temperature_non_learnable)
+        # Exponential ensures non-negativity
+        
+        else:
+            return x 
+
 
 # ─────────────────────────────────────────
 # 3. DLQF 전체 모델
@@ -106,6 +116,7 @@ class DLQFRNN(nn.Module):
 
         self.encoder = BiLSTMEncoder(config).to(config.device)
         self.nqf = NQF(config).to(config.device)
+        self.correction_head = nn.Linear(config.hidden_dim * 2, 1)
 
     def forward(self, x: torch.Tensor, alpha: torch.Tensor) -> torch.Tensor:
         """
@@ -124,7 +135,12 @@ class DLQFRNN(nn.Module):
 
         r_q = self.nqf(h_rep, a_rep)           # (B*M, 1)
         r_q = r_q.squeeze(-1).reshape(B, M)    # (B, M)
-        return r_q
+        h_detached = h.detach()
+
+        gamma = self.correction_head(h_detached).squeeze(-1)
+
+
+        return r_q, gamma
 
     def estimate_rv(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -138,9 +154,11 @@ class DLQFRNN(nn.Module):
         sf = self.config.scale_factor
         alpha = torch.linspace(1 / M, 1, M).to(x.device)
 
-        r_q = self.forward(x, alpha)                   # (B, M)
-        rv_hat = (r_q ** 2).sum(dim=1) / (sf ** 2)    # (B,)
-        return rv_hat
+        r_q, gamma = self.forward(x, alpha)                   # (B, M)
+        rv_base = (r_q ** 2).sum(dim=1) / (sf ** 2)    # (B,)
+        rv_hat = rv_base + gamma
+
+        return rv_hat, rv_base, gamma
 
 
 # ─────────────────────────────────────────
@@ -177,101 +195,60 @@ def l2_distance_loss(
 
     diff_sq = (f_true - f_pred) ** 2                    # (B, 2M-1)
     loss = (delta * diff_sq).sum(dim=1).sqrt()          # (B,)
+
     return loss.mean()
 
 
 # ─────────────────────────────────────────
-# 5. 학습 루프 (Algorithm 3)
+# 5. MSE Loss (Mean Squared Error)
+#    실현변동성의 제곱 오차
 # ─────────────────────────────────────────
-def train_dlqf(
-    model: DLQFRNN,
-    X: torch.Tensor,    # (N, T, input_dim)
-    Y: torch.Tensor,    # (N, M) — 정렬된 실제 |r| × scale_factor
-    config: DLQFRNNConfig,
-    device: str = 'cuda'
-):
-    model = model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
-
-    M = config.total_quantile
-    alpha = torch.linspace(1 / M, 1, M).to(device)
-
-    dataset = torch.utils.data.TensorDataset(X, Y)
-    loader = torch.utils.data.DataLoader(
-        dataset, batch_size=config.batch_size, shuffle=True
-    )
-
-    # Algorithm 3: 초기화 안정성 체크
-    print("초기화 조건 확인 중...")
-    for attempt in range(10):
-        for layer in model.modules():
-            if hasattr(layer, 'reset_parameters'):
-                layer.reset_parameters()
-
-        model.eval()
-        with torch.no_grad():
-            x_s = X[:1].to(device)
-            y_s = Y[:1].to(device)
-            r_q = model(x_s, alpha)
-            loss_val = l2_distance_loss(y_s, r_q).item()
-            std_val = r_q.std().item()
-
-        print(f"  시도 {attempt+1}: loss={loss_val:.4f}, std={std_val:.6f}")
-        if loss_val <= 1e2 and std_val >= 1e-3:
-            print("  ✅ 초기화 조건 통과\n")
-            break
-
-    # 본격 학습
-    for epoch in range(config.num_epochs):
-        model.train()
-        epoch_loss = 0.0
-
-        for x_batch, y_batch in loader:
-            x_batch = x_batch.to(device)
-            y_batch = y_batch.to(device)
-
-            r_q = model(x_batch, alpha)
-            loss = l2_distance_loss(y_batch, r_q)
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            epoch_loss += loss.item()
-
-        if (epoch + 1) % 10 == 0:
-            print(f"Epoch [{epoch+1}/{config.n_epochs}] | L2 Loss: {epoch_loss/len(loader):.6f}")
-
-    return model
-
-
-# ─────────────────────────────────────────
-# 6. Sanity Check
-# ─────────────────────────────────────────
-if __name__ == "__main__":
-    cfg = DLQFRNNConfig()
-
-    torch.manual_seed(cfg.seed)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Device: {device}\n")
-
+def mse_loss(
+    rv_true: torch.Tensor,   # (B,) — 실제 실현변동성
+    rv_pred: torch.Tensor,   # (B,) — 예측 실현변동성
+) -> torch.Tensor:
+    """
+    Mean Squared Error Loss for Realized Volatility
     
+    rv_true : (B,) — real rv
+    rv_pred : (B,) — pred rv
+    return  : scalar — MSE loss
+    """
+    mse = torch.mean((rv_true - rv_pred) ** 2)
 
-    # 더미 데이터
-    N = 400
-    X = torch.randn(N, cfg.input_len, cfg.input_dim)
-    Y = torch.abs(torch.randn(N, cfg.total_quantile) * 0.5)
-    Y, _ = Y.sort(dim=1)   # 정렬 필수
+    return mse
 
-    print(f"X: {X.shape} | Y: {Y.shape}\n")
 
-    model = DLQFRNN(cfg)
-    print(f"Parameters: {sum(p.numel() for p in model.parameters()):,}\n")
-
-    trained = train_dlqf(model, X, Y, cfg, device=device)
-
-    # RV 추정
-    trained.eval()
-    with torch.no_grad():
-        rv = trained.estimate_rv(X[:5].to(device))
-    print(f"\n추정 RV (5개): {rv.tolist()}")
-    print("\n✅ DLQF 완료!")
+# ─────────────────────────────────────────
+# 6. QLIKE Loss (Quasi-Likelihood)
+#    고변동성 과소예측에 더 큰 페널티
+# ─────────────────────────────────────────
+def qlike_loss(
+    rv_true: torch.Tensor,   # (B,) — 실제 실현변동성
+    rv_pred: torch.Tensor,   # (B,) — 예측 실현변동성
+) -> torch.Tensor:
+    """
+    Quasi-Likelihood Loss (QLIKE)
+    
+    고변동성(RV_true가 클 때)이 과소예측(RV_pred < RV_true)될 때
+    지수적으로 더 큰 페널티를 부여하는 손실함수.
+    
+    QLIKE = (1/T) * Σ [RV_t / RV_hat_t - log(RV_t / RV_hat_t) - 1]
+    
+    이는 RV_pred < RV_true인 경우 (under-prediction)에 매우 큰 값이 되므로,
+    리스크 관리 관점에서 고변동성을 놓치지 않도록 강제함.
+    
+    rv_true : (B,) — 실제 실현변동성
+    rv_pred : (B,) — 예측 실현변동성
+    반환    : scalar — QLIKE loss
+    """
+    # 수치 안정성: 매우 작은 값 피하기
+    epsilon = 1e-8
+    rv_pred_safe = torch.clamp(rv_pred, min=epsilon)
+    rv_true_safe = torch.clamp(rv_true, min=epsilon)
+    
+    # QLIKE = RV_t / RV_hat_t - log(RV_t / RV_hat_t) - 1
+    ratio = rv_true_safe / rv_pred_safe
+    qlike = torch.mean(ratio - torch.log(ratio) - 1.0)
+    
+    return qlike
