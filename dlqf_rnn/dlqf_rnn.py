@@ -121,7 +121,12 @@ class DLQFRNN(nn.Module):
 
         self.encoder = BiLSTMEncoder(config).to(config.device)
         self.nqf = NQF(config).to(config.device)
+
+        
         self.correction_head = nn.Linear(config.hidden_dim * 2, 1)
+
+        nn.init.zeros_(self.correction_head.weight)
+        nn.init.zeros_(self.correction_head.bias)
 
     def forward(self, x: torch.Tensor, alpha: torch.Tensor) -> torch.Tensor:
         """
