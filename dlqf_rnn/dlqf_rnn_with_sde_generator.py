@@ -184,7 +184,7 @@ class SDEReadout(nn.Module):
 
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
-                nn.init.normal_(m, mean=0, std=0.01)
+                nn.init.normal_(m.weight, mean=0, std=0.01)
                 nn.init.constant_(m.bias, val=0.0)
         
 
@@ -195,7 +195,7 @@ class SDEReadout(nn.Module):
         Returns:
             x : (B, sde_times)
         """
-        return self.linear(z).squeeze(-1)
+        return self.net(z).squeeze(-1)
 
 
 # =============================================================================
