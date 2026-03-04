@@ -30,6 +30,8 @@ class SDEDrift(nn.Module):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(config.lstm_hidden_dim * 2 + 1, config.sde_hidden_dim),  # +1 for time
+            LipSwish(),
+            nn.Linear(config.sde_hidden_dim, config.sde_hidden_dim),
             LipSwish()
         )
 
@@ -87,6 +89,8 @@ class SDEDiffusion(nn.Module):
 
         self.net = nn.Sequential(
             nn.Linear(config.lstm_hidden_dim * 2 + 1, config.sde_hidden_dim),
+            LipSwish(),
+            nn.Linear(config.sde_hidden_dim, config.sde_hidden_dim),
             LipSwish()
         )
 
