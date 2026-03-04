@@ -43,8 +43,8 @@ class SDEDrift(nn.Module):
                 nn.init.xavier_uniform_(m.weight)
                 nn.init.constant_(m.bias, val=0)
                 
-        nn.init.normal_(self.linear.weight, std=0.01) 
-        nn.init.constant_(self.linear.bias, 0)
+        nn.init.xavier_uniform_(self.linear.weight) 
+        nn.init.constant_(self.linear.bias, val=0)
             
     def forward(self, t, z):
         """
@@ -184,7 +184,7 @@ class SDEReadout(nn.Module):
 
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, mean=0, std=0.01)
+                nn.init.xavier_uniform_(m.weight)
                 nn.init.constant_(m.bias, val=0.0)
         
 
