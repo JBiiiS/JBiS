@@ -221,13 +221,13 @@ class SDEGenerator(nn.Module):
         ts = self.config.sde_times                
 
         # torchsde.sdeint returns (sde_times, B, lstm_hidden_dim*2)
-        z_path = torchsde.sdeint_adjoint(
+        z_path = torchsde.sdeint(
             self._sde,
             y0     = z0,
             ts     = ts,
             dt = ts[1] - ts[0],
             method = self.config.sde_method,
-            adjoint_method = self.config.adjoint_method
+            #adjoint_method = self.config.adjoint_method
         )                                                      # (sde_times, B, lstm_hidden_dim*2)
 
         z_path = z_path.permute(1, 0, 2)                      # (B, sde_times, lstm_hidden_dim*2)

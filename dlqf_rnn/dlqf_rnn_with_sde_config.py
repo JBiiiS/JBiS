@@ -29,12 +29,12 @@ class DLQFRNNWithSDEConfig(DLQFRNNConfig):
     # SDE Solver Settings
     # ----------------------------------
     noise_type: str = 'general'
-    sde_type: str = 'stratonovich'
+    sde_type: str = 'ito'
     # Numerical integration method passed to torchsde.sdeint.
     # 'euler'     : Euler-Maruyama  (fast, first-order, good for training)
     # 'milstein'  : Milstein        (second-order, slightly more accurate)
     # 'srk'       : Stochastic RK   (higher-order, slower)
-    sde_method: str = 'adversible_heun'
+    sde_method: str = 'euler'
     adjoint_method: str = 'adjoint_reversible_heun'
 
 
