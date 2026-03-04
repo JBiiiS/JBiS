@@ -32,16 +32,19 @@ class SDEDrift(nn.Module):
             nn.Linear(config.lstm_hidden_dim * 2 + 1, config.sde_hidden_dim),  # +1 for time
             LipSwish(),
             nn.Linear(config.sde_hidden_dim, config.sde_hidden_dim),
-            LipSwish(),
-            nn.Linear(config.sde_hidden_dim, config.lstm_hidden_dim * 2),
-            nn.Tanh()
+            LipSwish()
             
         )
+
+        self.linear = nn.Linear(config.sde_hidden_dim, config.lstm_hidden_dim * 2)
 
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
                 nn.init.constant_(m.bias, val=0)
+                
+        nn.init.normal_(self.linear.weight, std=0.01) 
+        nn.init.constant_(self.linear.bias, 0)
             
     def forward(self, t, z):
         """
@@ -56,7 +59,8 @@ class SDEDrift(nn.Module):
 
         t_batch = torch.full((z.size(0), 1), float(t), device=z.device, dtype=z.dtype)
         tz = torch.cat([t_batch, z], dim=-1)   # (B, 1 + lstm_hiddem_dim * 2)
-        out = self.net(tz)
+        out_1 = self.net(tz)
+        out = self.linear(out_1)
         return out
 
 
@@ -88,15 +92,19 @@ class SDEDiffusion(nn.Module):
             nn.Linear(config.lstm_hidden_dim * 2 + 1, config.sde_hidden_dim),
             LipSwish(),
             nn.Linear(config.sde_hidden_dim, config.sde_hidden_dim),
-            LipSwish(),
-            nn.Linear(config.sde_hidden_dim, config.lstm_hidden_dim * 2 * config.noise_dim),
-            
+            LipSwish()
         )
 
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
                 nn.init.constant_(m.bias, val=0)
+
+        self.linear =  nn.Linear(config.sde_hidden_dim, config.lstm_hidden_dim * 2 * config.noise_dim)
+        self.final_activation = nn.Softplus() 
+
+        nn.init.xavier_uniform_(self.linear.weight)
+        nn.init.constant_(self.linear.bias, 0.5)
 
     def forward(self, t, z):
         """
@@ -109,9 +117,12 @@ class SDEDiffusion(nn.Module):
         """
         t_batch = torch.full((z.size(0), 1), float(t), device=z.device, dtype=z.dtype)
         tz = torch.cat([t_batch, z], dim=-1)
-        out = self.net(tz)  
+        out_1 = self.net(tz) 
+        out_2 = self.linear(out_1)
+        out = self.final_activation(out_2)
+
         out = out.view(z.size(0), self.lstm_hidden_dim * 2, self.noise_dim)                                             # (B, lstm_hidden_dim * 2 * noise_dim)
-        return torch.abs(out)
+        return out
 
 
 # =============================================================================
@@ -163,12 +174,18 @@ class SDEReadout(nn.Module):
     """
 
     def __init__(self, config: DLQFRNNWithSDEConfig):
+        
         super().__init__()
-        self.linear = nn.Linear(config.lstm_hidden_dim * 2, config.output_dim)
+        self.net = nn.Sequential(
+            nn.Linear(config.lstm_hidden_dim * 2, config.sde_hidden_dim),
+            nn.SiLU(),
+            nn.Linear(config.sde_hidden_dim, config.output_dim),
+        )
 
-        nn.init.normal_(self.linear.weight, mean=0, std=1.0/(config.lstm_hidden_dim * 2) **0.5)
-        nn.init.constant_(self.linear.bias, 0)
-
+        for m in self.net.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.normal_(m, mean=0, std=0.01)
+                nn.init.constant_(m.bias, val=0.0)
         
 
     def forward(self, z):
