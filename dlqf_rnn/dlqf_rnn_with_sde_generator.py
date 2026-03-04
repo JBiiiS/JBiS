@@ -155,8 +155,98 @@ class _SDE(nn.Module):
 
     def g(self, t, y):
         return self.diffusion(t, y)
+    
+
+# 0305 0128 new version
+#=============================================================================
+# [4] Readout  ζ_θ(z) : latent → observation space
+# =============================================================================
+
+class SDEReadout(nn.Module):
+    """
+    Maps the latent trajectory to the observable return space x(t).
+    
+    * Modified to accept a dynamic `in_dim` so it can be reused for both 
+      the stochastic residual (z_path) and the deterministic base (z0 + t).
+    """
+    def __init__(self, config: DLQFRNNWithSDEConfig, in_dim: int = None):
+        super().__init__()
+        
+        # 입력 차원이 명시되지 않으면 기본값(lstm_hidden_dim * 2)을 사용
+        if in_dim is None:
+            in_dim = config.lstm_hidden_dim * 2
+            
+        self.net = nn.Sequential(
+            nn.Linear(in_dim, config.sde_hidden_dim),
+            nn.SiLU(),
+            nn.Linear(config.sde_hidden_dim, config.output_dim),
+        )
+
+        for m in self.net.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                nn.init.constant_(m.bias, val=0.0)
+
+    def forward(self, z):
+        return self.net(z).squeeze(-1)
 
 
+# =============================================================================
+# [5] SDEGenerator — full Neural SDE generator (with Temporal Skip Connection)
+# =============================================================================
+
+class SDEGenerator(nn.Module):
+    def __init__(self, config: DLQFRNNWithSDEConfig):
+        super().__init__()
+        self.config = config
+        self.drift     = SDEDrift(config)
+        self.diffusion = SDEDiffusion(config)
+        self._sde      = _SDE(self.drift, self.diffusion, self.config)
+        
+        # 1. 잔차용 Readout (입력: SDE 잠재 상태)
+        self.readout   = SDEReadout(config, in_dim=config.lstm_hidden_dim * 2)
+        
+        # 2. 베이스라인용 Readout (입력: LSTM 잠재 상태 + 시간 차원 1개 추가)
+        self.base_readout = SDEReadout(config, in_dim=config.lstm_hidden_dim * 2 + 1)  
+
+    def forward(self, z0):
+        ts = self.config.sde_times
+
+        # --- 1. 확률적 잔차 경로 (Stochastic Residual Pathway) ---
+        z_path = torchsde.sdeint(
+            self._sde, y0=z0, ts=ts,
+            dt=ts[1] - ts[0],
+            method=self.config.sde_method,
+        )
+        z_path = z_path.permute(1, 0, 2)  # (B, M, lstm_hidden_dim*2)
+        residual = self.readout(z_path)   # (B, M)
+
+        # --- 2. 결정론적 베이스라인 경로 (Deterministic Base Pathway) ---
+        B, M = z0.size(0), ts.size(0)
+        
+        # z0를 모든 시간 스텝 M에 대해 확장: (B, M, lstm_hidden_dim*2)
+        z0_expanded = z0.unsqueeze(1).expand(-1, M, -1)
+        
+        # ts 텐서를 (B, M, 1) 형태로 확장 (디바이스 일치 필수)
+        t_expanded = ts.view(1, M, 1).expand(B, -1, -1).to(z0.device)
+        
+        # z0와 t를 마지막 차원을 기준으로 결합: (B, M, lstm_hidden_dim*2 + 1)
+        base_input = torch.cat([z0_expanded, t_expanded], dim=-1)
+        
+        # 시간에 따라 형태가 변하는 베이스라인 곡선 생성
+        base = self.base_readout(base_input)  # (B, M)
+
+        # --- 3. 최종 산출물 병합 ---
+        x_hat = base + residual
+
+        return x_hat
+
+
+
+
+
+
+'''
 # =============================================================================
 # [4] Readout  ζ_θ(z) : latent → observation space
 # =============================================================================
@@ -201,51 +291,6 @@ class SDEReadout(nn.Module):
 # [5] SDEGenerator — full Neural SDE generator
 # =============================================================================
 
-class SDEGenerator(nn.Module):
-
-
-    def __init__(self, config: DLQFRNNWithSDEConfig):
-        super().__init__()
-        self.config     = config
-        self.lstm_hidden_dim= config.lstm_hidden_dim
-
-        self.drift     = SDEDrift(config)
-        self.diffusion = SDEDiffusion(config)
-        self._sde      = _SDE(self.drift, self.diffusion, self.config)
-        self.readout   = SDEReadout(config)
-
-
-    def forward(self, z0):
-       
-        ts = self.config.sde_times                
-
-        # 1. Isolate the SDE: Force it to model ONLY the stochastic residual.
-        # By initializing with zeros, the SDE is no longer burdened with 
-        # maintaining the deterministic market trend.
-        zero_init = torch.zeros_like(z0)
-
-        # 2. Generate the pure residual trajectory
-        # torchsde.sdeint returns (sde_times, B, lstm_hidden_dim*2)
-        z_res = torchsde.sdeint(
-            self._sde,
-            y0     = zero_init,
-            ts     = ts,
-            dt     = ts[1] - ts[0],
-            method = self.config.sde_method,
-        )                                                    
-
-        z_res = z_res.permute(1, 0, 2)  # (B, sde_times, lstm_hidden_dim*2)
-
-        # 3. The Stochastic Skip Connection
-        # Broadcast the uncorrupted deterministic embedding z0 across all M time steps
-        # and add it to the stochastic residual.
-        z_path = z0.unsqueeze(1) + z_res # (B, sde_times, lstm_hidden_dim*2)
-
-        # 4. Map the combined latent path to the observable quantile space
-        x_hat = self.readout(z_path)     # (B, sde_times)
-
-        return x_hat
-
 
 class SDEGenerator(nn.Module):
     def __init__(self, config: DLQFRNNWithSDEConfig):
@@ -272,3 +317,4 @@ class SDEGenerator(nn.Module):
         x_hat = base + residual
 
         return x_hat
+'''
