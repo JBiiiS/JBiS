@@ -45,6 +45,9 @@ class SDEDrift(nn.Module):
                 
         nn.init.xavier_uniform_(self.linear.weight) 
         nn.init.constant_(self.linear.bias, val=0)
+
+
+        self.final_activation = nn.Tanh() 
             
     def forward(self, t, z):
         """
@@ -61,6 +64,7 @@ class SDEDrift(nn.Module):
         tz = torch.cat([t_batch, z], dim=-1)   # (B, 1 + lstm_hiddem_dim * 2)
         out_1 = self.net(tz)
         out = self.linear(out_1)
+        out = self.final_activation(out)
         return out
 
 
@@ -101,7 +105,7 @@ class SDEDiffusion(nn.Module):
                 nn.init.constant_(m.bias, val=0)
 
         self.linear =  nn.Linear(config.sde_hidden_dim, config.lstm_hidden_dim * 2 * config.noise_dim)
-        self.final_activation = nn.Softplus() 
+        self.final_activation = nn.Sigmoid() 
 
         nn.init.xavier_uniform_(self.linear.weight)
         nn.init.constant_(self.linear.bias, 0.0)
