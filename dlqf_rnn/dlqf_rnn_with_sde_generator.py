@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchsde # type: ignore
+import torch.nn.functional as F
 from torchsde import BrownianInterval #type:ignore
 from .dlqf_rnn_with_sde_config import DLQFRNNWithSDEConfig
 
@@ -172,35 +173,37 @@ class SDEReadout(nn.Module):
     Input  : (B, sde_times, lstm_hidden_dim * 2)
     Output : (B, sde_times, output_dim)
     """
-
     def __init__(self, config: DLQFRNNWithSDEConfig):
-        
         super().__init__()
-        self.softplus_deno = config.softplus_deno
+        self.use_learnable_exp = config.use_learnable_exp
+        self.use_non_learnable_exp = config.use_non_learnable_exp
+        self.exp_deno = config.exp_deno_init
+
+        if self.use_learnable_exp:
+            self.log_deno = nn.Parameter(torch.tensor(float(config.exp_deno_init)).log())
+
         self.net = nn.Sequential(
             nn.Linear(config.lstm_hidden_dim * 2, config.sde_hidden_dim),
             nn.SiLU(),
             nn.Linear(config.sde_hidden_dim, config.output_dim),
-            nn.Softplus()
         )
 
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
                 nn.init.constant_(m.bias, val=0.0)
-        
 
     def forward(self, z):
-        """
-        Args:
-            z : (B, sde_times, lstm_hidden_dim*2)
-        Returns:
-            x : (B, sde_times)
-        """
-
         raw_out = self.net(z).squeeze(-1)
-        out = torch.cumsum(raw_out, dim=1) / self.softplus_deno
 
+        if self.use_learnable_exp:
+            pos_out = torch.exp(raw_out) / self.log_deno.exp()
+        elif self.use_non_learnable_exp:
+            pos_out = torch.exp(raw_out) / self.exp_deno
+        else:
+            pos_out = F.softplus(raw_out)
+
+        out = torch.cumsum(pos_out, dim=1)
         return out
 
 
