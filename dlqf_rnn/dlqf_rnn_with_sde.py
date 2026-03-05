@@ -66,12 +66,10 @@ class DLQFRNNWithSDE(nn.Module):
         """
         h = self.encoder(x)     # (B, hidden_dim * 2)
         
-        raw_r_q = self.SDEGenerator(h)
-
-        r_q, _ = torch.abs(raw_r_q).sort(dim=1)
+        r_q = self.SDEGenerator(h)
 
 
-        return r_q, raw_r_q
+        return r_q
 
     def estimate_rv(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -81,7 +79,7 @@ class DLQFRNNWithSDE(nn.Module):
         """
         sf = self.config.scale_factor
 
-        r_q, _ = self.forward(x)                 
+        r_q = self.forward(x)                 
         rv_x = (r_q ** 2).sum(dim=1) / (sf ** 2)    # (B,)
         return rv_x
 

@@ -103,7 +103,7 @@ class SDEDiffusion(nn.Module):
         self.final_activation = nn.Softplus() 
 
         nn.init.xavier_uniform_(self.linear.weight)
-        nn.init.constant_(self.linear.bias, 0.5)
+        nn.init.constant_(self.linear.bias, 0.0)
 
     def forward(self, t, z):
         """
@@ -157,6 +157,76 @@ class _SDE(nn.Module):
         return self.diffusion(t, y)
     
 
+
+# =============================================================================
+# [4] Readout  ζ_θ(z) : latent → observation space
+# =============================================================================
+
+class SDEReadout(nn.Module):
+    """
+    Maps the latent SDE trajectory z(t) to the observable return space x(t).
+    Applied point-wise at every time step.
+
+    Architecture mirrors NeuralODEDecoder in neural_ode_back.py.
+
+    Input  : (B, sde_times, lstm_hidden_dim * 2)
+    Output : (B, sde_times, output_dim)
+    """
+
+    def __init__(self, config: DLQFRNNWithSDEConfig):
+        
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(config.lstm_hidden_dim * 2, config.sde_hidden_dim),
+            nn.SiLU(),
+            nn.Linear(config.sde_hidden_dim, config.output_dim),
+        )
+
+        for m in self.net.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                nn.init.constant_(m.bias, val=0.0)
+        
+
+    def forward(self, z):
+        """
+        Args:
+            z : (B, sde_times, lstm_hidden_dim*2)
+        Returns:
+            x : (B, sde_times)
+        """
+        return self.net(z).squeeze(-1)
+
+
+# =============================================================================
+# [5] SDEGenerator — full Neural SDE generator
+# =============================================================================
+
+
+class SDEGenerator(nn.Module):
+    def __init__(self, config: DLQFRNNWithSDEConfig):
+        super().__init__()
+        self.config = config
+        self.drift     = SDEDrift(config)
+        self.diffusion = SDEDiffusion(config)
+        self._sde      = _SDE(self.drift, self.diffusion, self.config)
+        self.readout   = SDEReadout(config)  
+
+    def forward(self, z0):
+        ts = self.config.sde_times
+
+        z_path = torchsde.sdeint(
+            self._sde, y0=z0, ts=ts,
+            dt=ts[1] - ts[0],
+            method=self.config.sde_method,
+        ) 
+        z_path = z_path.permute(1, 0, 2)
+
+        x_hat = self.readout(z_path)
+
+        return x_hat
+'''
+
 # 0305 0128 new version
 #=============================================================================
 # [4] Readout  ζ_θ(z) : latent → observation space
@@ -180,6 +250,7 @@ class SDEReadout(nn.Module):
             nn.Linear(in_dim, config.sde_hidden_dim),
             nn.SiLU(),
             nn.Linear(config.sde_hidden_dim, config.output_dim),
+            nn.Softplus()
         )
 
         for m in self.net.modules():
@@ -247,74 +318,4 @@ class SDEGenerator(nn.Module):
 
 
 '''
-# =============================================================================
-# [4] Readout  ζ_θ(z) : latent → observation space
-# =============================================================================
 
-class SDEReadout(nn.Module):
-    """
-    Maps the latent SDE trajectory z(t) to the observable return space x(t).
-    Applied point-wise at every time step.
-
-    Architecture mirrors NeuralODEDecoder in neural_ode_back.py.
-
-    Input  : (B, sde_times, lstm_hidden_dim * 2)
-    Output : (B, sde_times, output_dim)
-    """
-
-    def __init__(self, config: DLQFRNNWithSDEConfig):
-        
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(config.lstm_hidden_dim * 2, config.sde_hidden_dim),
-            nn.SiLU(),
-            nn.Linear(config.sde_hidden_dim, config.output_dim),
-        )
-
-        for m in self.net.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.xavier_uniform_(m.weight)
-                nn.init.constant_(m.bias, val=0.0)
-        
-
-    def forward(self, z):
-        """
-        Args:
-            z : (B, sde_times, lstm_hidden_dim*2)
-        Returns:
-            x : (B, sde_times)
-        """
-        return self.net(z).squeeze(-1)
-
-
-# =============================================================================
-# [5] SDEGenerator — full Neural SDE generator
-# =============================================================================
-
-
-class SDEGenerator(nn.Module):
-    def __init__(self, config: DLQFRNNWithSDEConfig):
-        super().__init__()
-        self.config = config
-        self.drift     = SDEDrift(config)
-        self.diffusion = SDEDiffusion(config)
-        self._sde      = _SDE(self.drift, self.diffusion, self.config)
-        self.readout   = SDEReadout(config)
-        self.base_readout = SDEReadout(config)  
-
-    def forward(self, z0):
-        ts = self.config.sde_times
-
-        z_path = torchsde.sdeint(
-            self._sde, y0=z0, ts=ts,
-            dt=ts[1] - ts[0],
-            method=self.config.sde_method,
-        )
-        z_path = z_path.permute(1, 0, 2)
-
-        base = self.base_readout(z0.unsqueeze(1).expand_as(z_path))
-        residual = self.readout(z_path)
-        x_hat = base + residual
-
-        return x_hat
-'''
