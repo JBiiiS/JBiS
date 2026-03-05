@@ -18,8 +18,6 @@ class DLQFRNNConfig(BaseConfig):
     latent_dim_2: int = 8
     latent_dim_3: int = 4 
 
-    exp_deno_init: float = 8.5
-    softplus_deno: float = 100.0
     
     use_learnable_exp: bool = False
     use_non_learnable_exp: bool = False

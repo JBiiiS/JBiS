@@ -18,11 +18,12 @@ class DLQFRNNWithSDEConfig(DLQFRNNConfig):
     # Hidden layer width for μ_θ(t, z) and σ_θ(t, z).
     sde_hidden_dim: int = 16
 
-    # [Readout / Decoder]
-    # Maps latent state z_t → observation x_t.
-    # Must match the number of assets in the real data.
-    # Set equal to num_assets if modeling full return vector,
-    # or a smaller value if modeling a single asset at a time.
+    exp_deno_init: float = 8.5
+    softplus_deno: float = 100.0
+    
+    gamma_init: float = 0.5
+    alpha_init: float = 1.0
+
     output_dim: int = 1       # default matches BaseConfig.num_assets
 
     # ----------------------------------
@@ -44,3 +45,6 @@ class DLQFRNNWithSDEConfig(DLQFRNNConfig):
         # Time grid shared by both SDE solver 
     
         self.sde_times = torch.linspace(0, 1, self.total_quantile)
+
+
+        

@@ -20,15 +20,14 @@ class SDEDrift(nn.Module):
     Defines the deterministic part of the SDE:
         dz = μ_θ(t, z) dt  +  σ_θ(t, z) dW
 
-    Time t is concatenated to z so the drift can depend explicitly on time
-    (non-autonomous system), which is important for financial path dynamics.
-
-    Input  : (t, z)  →  [scalar 0-dim tensor, (B, lstm_hidden_dim*2]
-    Output : (B, lstm_hidden_dim*2)
+    * Modified to include Time-Gated Drift Dilation.
+    * Removed nn.Tanh() to allow for explosive momentum at the tail.
     """
 
     def __init__(self, config: DLQFRNNWithSDEConfig):
         super().__init__()
+        self.gamma_init = config.gamma_init
+        self.alpha_init = config.alpha_init
         self.net = nn.Sequential(
             nn.Linear(config.lstm_hidden_dim * 2 + 1, config.sde_hidden_dim),  # +1 for time
             LipSwish(),
@@ -38,6 +37,14 @@ class SDEDrift(nn.Module):
 
         self.linear = nn.Linear(config.sde_hidden_dim, config.lstm_hidden_dim * 2)
 
+        # -------------------------------------------------------------------
+        # [Time-Gated Dilation Parameters]
+        # 꼬리 구간(t -> 1)에서 드리프트를 기하급수적으로 폭발시킬 제어 변수들.
+        # 학습을 통해 모델이 스스로 증폭률과 곡률을 찾게 만듭니다.
+        # -------------------------------------------------------------------
+        self.raw_gamma = nn.Parameter(torch.tensor(0.5))  # 증폭률 (Scale)
+        self.raw_alpha = nn.Parameter(torch.tensor(1.0))  # 곡률 (Power)
+
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
@@ -45,9 +52,8 @@ class SDEDrift(nn.Module):
                 
         nn.init.xavier_uniform_(self.linear.weight) 
         nn.init.constant_(self.linear.bias, val=0)
-
-
-        self.final_activation = nn.Tanh() 
+        
+        # self.final_activation = nn.Tanh() <-- 치명적인 에러 원인. 완벽히 삭제합니다.
             
     def forward(self, t, z):
         """
@@ -56,18 +62,28 @@ class SDEDrift(nn.Module):
             z : (B, lstm_hidden_dim * 2)
         Returns:
             (B, lstm_hidden_dim * 2) — drift vector
-            
         """
-        # When a solver proceeds, the calculation is operated with discrete t node, not a full tensor. So, at each node, t is a 0-dim scalar and we can add each scalar into input; broadcast to (B, 1) via multiplication
-
         t_batch = torch.full((z.size(0), 1), float(t), device=z.device, dtype=z.dtype)
-        tz = torch.cat([t_batch, z], dim=-1)   # (B, 1 + lstm_hiddem_dim * 2)
+        tz = torch.cat([t_batch, z], dim=-1)   # (B, 1 + lstm_hidden_dim * 2)
+        
         out_1 = self.net(tz)
-        out = self.linear(out_1)
-        out = self.final_activation(out)
+        mu_base = self.linear(out_1)           # (B, lstm_hidden_dim * 2) - 기본 모멘텀
+
+        # -------------------------------------------------------------------
+        # [Apply Time-Gated Drift Dilation]
+        # -------------------------------------------------------------------
+        # parameter가 음수가 되지 않도록 Softplus로 양수 보장
+        gamma = F.softplus(self.raw_gamma)
+        alpha = F.softplus(self.raw_alpha)
+        
+        # Dilation Gate 수식: 1 + gamma * t^alpha
+        # t는 0에서 1 사이의 값이므로, alpha가 클수록 t=1에 도달할 때만 문이 급격히 열립니다.
+        dilation_gate = 1.0 + gamma * (t_batch ** alpha)
+        
+        # 기본 모멘텀에 팽창 게이트를 Element-wise 곱연산 (SwiGLU의 효과를 안전하게 구현)
+        out = mu_base * dilation_gate
+        
         return out
-
-
 # =============================================================================
 # [2] Diffusion Network  σ_θ(t, z)
 # =============================================================================
