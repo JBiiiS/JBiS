@@ -19,12 +19,16 @@ class DLQFRNNConfig(BaseConfig):
     latent_dim_3: int = 4 
 
     exp_deno_init: float = 8.5
+    softplus_deno: float = 100.0
+    
     use_learnable_exp: bool = False
     use_non_learnable_exp: bool = False
 
     total_quantile: int = 78   # 하루 5분 수익률 개수 (390분 / 5분)
     input_len: int = 66
     scale_factor: int = 100  # |r| × 100 (numerical underflow 방지, 논문 4.2.3)
+
+
 
     lambda_mse: float = 0.01
     lambda_qlike: float = 0.01

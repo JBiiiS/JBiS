@@ -176,10 +176,12 @@ class SDEReadout(nn.Module):
     def __init__(self, config: DLQFRNNWithSDEConfig):
         
         super().__init__()
+        self.softplus_deno = config.softplus_deno
         self.net = nn.Sequential(
             nn.Linear(config.lstm_hidden_dim * 2, config.sde_hidden_dim),
             nn.SiLU(),
             nn.Linear(config.sde_hidden_dim, config.output_dim),
+            nn.Softplus()
         )
 
         for m in self.net.modules():
@@ -195,7 +197,11 @@ class SDEReadout(nn.Module):
         Returns:
             x : (B, sde_times)
         """
-        return self.net(z).squeeze(-1)
+
+        raw_out = self.net(z).squeeze(-1)
+        out = torch.cumsum(raw_out, dim=1) / self.softplus_deno
+
+        return out
 
 
 # =============================================================================
@@ -225,6 +231,8 @@ class SDEGenerator(nn.Module):
         x_hat = self.readout(z_path)
 
         return x_hat
+    
+
 '''
 
 # 0305 0128 new version
