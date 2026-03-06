@@ -34,7 +34,7 @@ class DLQFRNNWithODEConfig(DLQFRNNConfig):
         self.lstm_hidden_dim: int = self.hidden_dim
         # Time grid shared by both SDE solver 
     
-        self.ode_times = torch.linspace(0, 1, self.total_quantile)
+        self.ode_times = torch.linspace(0, 1, self.total_quantile).to(self.device)
 
 
         

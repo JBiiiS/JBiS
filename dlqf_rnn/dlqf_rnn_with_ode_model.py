@@ -24,9 +24,6 @@ class ODEFunc(nn.Module):
         )
         self.linear = nn.Linear(config.ode_hidden_dim, config.lstm_hidden_dim * 2)
 
-        self.raw_gamma = nn.Parameter(torch.tensor(config.gamma_init))
-        self.raw_alpha = nn.Parameter(torch.tensor(config.alpha_init))
-
         for m in self.net.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
@@ -36,17 +33,14 @@ class ODEFunc(nn.Module):
         nn.init.constant_(self.linear.bias, val=0)
 
     def forward(self, t, z):
-        t_batch = torch.full((z.size(0), 1), float(t), device=z.device, dtype=z.dtype)
+        t_batch = torch.full((z.size(0), 1), float(t.detach()), device=z.device, dtype=z.dtype)
         tz = torch.cat([t_batch, z], dim=-1)
 
         out_1 = self.net(tz)
         mu_base = self.linear(out_1)
 
-        gamma = F.softplus(self.raw_gamma)
-        alpha = F.softplus(self.raw_alpha)
-        dilation_gate = 1.0 + gamma * (t_batch ** alpha)
 
-        return mu_base * dilation_gate
+        return mu_base
 
 
 # =============================================================================

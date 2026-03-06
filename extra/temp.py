@@ -666,3 +666,39 @@ def evaluate_test(model, state_dict, label):
 
 evaluate_test(model_sde, best_val_state,   "Val-Best Checkpoint")
 evaluate_test(model_sde, best_train_state, "Train-Best Checkpoint")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=============================================
+  Val-Best Checkpoint
+=============================================
+Test L2 Loss : 0.048734
+Test MSE     : 0.00080095
+Test MAE     : 0.00007848
+Test MAPE    : 0.6078
+=============================================
