@@ -4,7 +4,7 @@ from .dlqf_rnn_config import DLQFRNNConfig
 
 
 @dataclass
-class DLQFRNNWithSDEConfig(DLQFRNNConfig):
+class DLQFRNNWithODEConfig(DLQFRNNConfig):
     # ----------------------------------
     # Neural SDE Settings
     # ----------------------------------
@@ -16,7 +16,7 @@ class DLQFRNNWithSDEConfig(DLQFRNNConfig):
 
     # [Drift / Diffusion Networks]
     # Hidden layer width for μ_θ(t, z) and σ_θ(t, z).
-    sde_hidden_dim: int = 16
+    ode_hidden_dim: int = 16
 
     exp_deno_init: float = 8.5
     softplus_deno: float = 100.0
@@ -26,17 +26,7 @@ class DLQFRNNWithSDEConfig(DLQFRNNConfig):
 
     output_dim: int = 1       # default matches BaseConfig.num_assets
 
-    # ----------------------------------
-    # SDE Solver Settings
-    # ----------------------------------
-    noise_type: str = 'general'
-    sde_type: str = 'ito'
-    # Numerical integration method passed to torchsde.sdeint.
-    # 'euler'     : Euler-Maruyama  (fast, first-order, good for training)
-    # 'milstein'  : Milstein        (second-order, slightly more accurate)
-    # 'srk'       : Stochastic RK   (higher-order, slower)
-    sde_method: str = 'euler'
-    adjoint_method: str = 'adjoint_reversible_heun'
+
 
 
     def __post_init__(self):
@@ -44,7 +34,7 @@ class DLQFRNNWithSDEConfig(DLQFRNNConfig):
         self.lstm_hidden_dim: int = self.hidden_dim
         # Time grid shared by both SDE solver 
     
-        self.sde_times = torch.linspace(0, 1, self.total_quantile)
+        self.ode_times = torch.linspace(0, 1, self.total_quantile)
 
 
         
