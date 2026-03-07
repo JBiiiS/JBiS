@@ -128,7 +128,7 @@ class CDEDiscriminator(nn.Module):
             X       = interpolated_x,
             func    = self.cde_func,
             z0      = h0,
-            t       = interval,
+            t       = interpolated_x.interval,
             method  = 'dopri5',    
             adjoint = True,        
             options = {
