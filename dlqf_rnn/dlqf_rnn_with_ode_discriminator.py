@@ -131,12 +131,9 @@ class CDEDiscriminator(nn.Module):
             t       = interpolated_x.interval,
             method  = 'dopri5',    
             adjoint = True,        
-            options = {
-                'atol': 1e-4,      
-                'rtol': 1e-4       
-            }
-        )               
-    
+            atol    = 1e-4,      # Extracted as a top-level explicit argument
+            rtol    = 1e-4       # Extracted as a top-level explicit argument
+        )
 
         # ------------------------------------------------------------------
         # [4] Readout from final hidden state h(T)
