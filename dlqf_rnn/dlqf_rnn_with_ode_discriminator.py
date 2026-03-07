@@ -125,14 +125,17 @@ class CDEDiscriminator(nn.Module):
         # ------------------------------------------------------------------
         
         h = torchcde.cdeint(
-            X              = interpolated_x,
-            func           = self.cde_func,
-            z0             = h0,
-            t              = interpolated_x.interval, # [t_start, t_end]
-            method         = 'dopri5',      
-            backend        = 'torchode',              
-            dt             = times[1] - times[0],          
-        )                              
+            X       = interpolated_x,
+            func    = self.cde_func,
+            z0      = h0,
+            t       = interval,
+            method  = 'dopri5',    
+            adjoint = True,        
+            options = {
+                'atol': 1e-4,      
+                'rtol': 1e-4       
+            }
+        )               
     
 
         # ------------------------------------------------------------------
