@@ -96,29 +96,67 @@ def qlike_loss(rv_true, rv_pred):
 
 
 
-def _train_with_cde(model1 : DLQFRNNWithODE, model2: DLQFRNNWithODEDiscriminator, x_b : torch.Tensor, y_b : torch.Tensor, opt_d : torch.optim.Optimizer, opt_g :  torch.optim.Optimizer):
+def _train_with_cde(
+    model1: DLQFRNNWithODE, 
+    model2: DLQFRNNWithODEDiscriminator, 
+    x_b: torch.Tensor, 
+    y_b: torch.Tensor, 
+    opt_d: torch.optim.Optimizer, 
+    opt_g: torch.optim.Optimizer,
+    config: DLQFRNNWithODEConfig  # Added config injection
+):
     model1.train()
     model2.train()
-    opt_d.zero_grad()
-    opt_g.zero_grad()
 
+    # =========================================================================
+    # [Step 1] Train the CDE Discriminator
+    # Objective: Maximize E[D(real)] - E[D(fake)] => Minimize E[D(fake)] - E[D(real)]
+    # =========================================================================
+    opt_d.zero_grad()
+
+    # Forward pass through the Generator
     r_q_ode = model1(x_b)
 
-    fake_score = model2(r_q_ode)   
-
+    # CRITICAL: .detach() severs the computational graph here.
+    # This ensures the Discriminator's backward pass does not alter the Generator.
+    fake_score = model2(r_q_ode.detach()) 
     real_score = model2(y_b)
     
-    loss = fake_score.mean() - real_score.mean()
-
-    loss.backward()
-
-    for params in model1.parameters():
-        if params.grad is not None:
-            params.grad *= -1
-
+    # WGAN Discriminator Loss
+    d_loss = fake_score.mean() - real_score.mean()
+    
+    d_loss.backward()
     opt_d.step()
-    opt_g.step()
-    opt_d.zero_grad()
+
+    # =========================================================================
+    # [Step 2] Train the ODE Generator (Hybrid Objective)
+    # Objective: Minimize L2 Distance + λ * (-E[D(fake)])
+    # =========================================================================
     opt_g.zero_grad()
 
-    return fake_score.mean().item(), real_score.mean().item()
+    # We must compute a fresh forward pass (or use the non-detached r_q_ode)
+    # to maintain the computational graph back to the Generator's parameters.
+    # Since we already computed r_q_ode above and didn't detach the original tensor,
+    # we can simply reuse it to save heavy ODE integration computations.
+    
+    # A. Base Geometrical Loss (Maintaining the ODE's fundamental structure)
+    loss_l2 = l2_distance_loss(y_b, r_q_ode)
+
+    # B. Adversarial Loss (Tricking the Discriminator)
+    # We pass the non-detached trajectory so gradients flow back to the ODE.
+    gen_fake_score = model2(r_q_ode)
+    loss_gan = -gen_fake_score.mean()
+
+    # C. Unified Hybrid Loss
+    lambda_gan = config.lambda_gan
+    
+    g_loss_total = loss_l2 + (lambda_gan * loss_gan)
+
+    # A single backward pass computes the vector sum of both L2 and GAN gradients.
+    g_loss_total.backward()
+    opt_g.step()
+
+    # =========================================================================
+    # Return metrics for logging
+    # =========================================================================
+    return fake_score.mean().item(), real_score.mean().item(), loss_l2.item()
