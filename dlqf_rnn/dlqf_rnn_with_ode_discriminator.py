@@ -109,8 +109,6 @@ class CDEDiscriminator(nn.Module):
         # ------------------------------------------------------------------
         # [1] Build continuous interpolation from discrete path
         # ------------------------------------------------------------------
-        # Linear interpolation is preferred by Kidger et al. for the CDE Discriminator 
-        # when using the torchsde backend.
         coeffs = torchcde.linear_interpolation_coeffs(x, t=times)
         interpolated_x = torchcde.LinearInterpolation(coeffs, t=times)
 
@@ -121,9 +119,14 @@ class CDEDiscriminator(nn.Module):
         h0 = self.h0_linear(x0)                # (B, cde_hidden_dim)
 
         # ------------------------------------------------------------------
+        # [★ 핵심 패치 ★] Adjoint Method를 위한 파라미터 명시적 수집
+        # ------------------------------------------------------------------
+        # CDE 벡터 필드의 가중치와, Generator로 역전파될 궤적(coeffs)을 튜플로 묶습니다.
+        adjoint_params = tuple(self.cde_func.parameters()) + (coeffs,)
+
+        # ------------------------------------------------------------------
         # [3] Integrate CDE using the 'torchsde' backend and 'reversible_heun'
         # ------------------------------------------------------------------
-        
         h = torchcde.cdeint(
             X       = interpolated_x,
             func    = self.cde_func,
@@ -131,8 +134,9 @@ class CDEDiscriminator(nn.Module):
             t       = interpolated_x.interval,
             method  = 'dopri5',    
             adjoint = True,        
-            atol    = 1e-4,      # Extracted as a top-level explicit argument
-            rtol    = 1e-4       # Extracted as a top-level explicit argument
+            adjoint_params = adjoint_params, # <--- 누락되었던 파라미터 추가!
+            atol    = 1e-4,      
+            rtol    = 1e-4       
         )
 
         # ------------------------------------------------------------------
