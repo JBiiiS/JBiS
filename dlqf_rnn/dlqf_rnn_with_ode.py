@@ -134,6 +134,7 @@ def _train_with_cde(
     # Objective: Minimize L2 Distance + λ * (-E[D(fake)])
     # =========================================================================
     opt_g.zero_grad()
+    loss_l2 = torch.tensor(0)
 
     if config.only_d_epoch <= current_epoch:
 
