@@ -103,7 +103,8 @@ def _train_with_cde(
     y_b: torch.Tensor, 
     opt_d: torch.optim.Optimizer, 
     opt_g: torch.optim.Optimizer,
-    config: DLQFRNNWithODEConfig  # Added config injection
+    config: DLQFRNNWithODEConfig,  # Added config injection
+    current_epoch
 ):
     model1.train()
     model2.train()
@@ -134,27 +135,29 @@ def _train_with_cde(
     # =========================================================================
     opt_g.zero_grad()
 
-    # We must compute a fresh forward pass (or use the non-detached r_q_ode)
-    # to maintain the computational graph back to the Generator's parameters.
-    # Since we already computed r_q_ode above and didn't detach the original tensor,
-    # we can simply reuse it to save heavy ODE integration computations.
-    
-    # A. Base Geometrical Loss (Maintaining the ODE's fundamental structure)
-    loss_l2 = l2_distance_loss(y_b, r_q_ode)
+    if config.only_d_epoch <= current_epoch:
 
-    # B. Adversarial Loss (Tricking the Discriminator)
-    # We pass the non-detached trajectory so gradients flow back to the ODE.
-    gen_fake_score = model2(r_q_ode)
-    loss_gan = -gen_fake_score.mean()
+        # We must compute a fresh forward pass (or use the non-detached r_q_ode)
+        # to maintain the computational graph back to the Generator's parameters.
+        # Since we already computed r_q_ode above and didn't detach the original tensor,
+        # we can simply reuse it to save heavy ODE integration computations.
+        
+        # A. Base Geometrical Loss (Maintaining the ODE's fundamental structure)
+        loss_l2 = l2_distance_loss(y_b, r_q_ode)
 
-    # C. Unified Hybrid Loss
-    lambda_gan = config.lambda_gan
-    
-    g_loss_total = loss_l2 + (lambda_gan * loss_gan)
+        # B. Adversarial Loss (Tricking the Discriminator)
+        # We pass the non-detached trajectory so gradients flow back to the ODE.
+        gen_fake_score = model2(r_q_ode)
+        loss_gan = -gen_fake_score.mean()
 
-    # A single backward pass computes the vector sum of both L2 and GAN gradients.
-    g_loss_total.backward()
-    opt_g.step()
+        # C. Unified Hybrid Loss
+        lambda_gan = config.lambda_gan
+        
+        g_loss_total = loss_l2 + (lambda_gan * loss_gan)
+
+        # A single backward pass computes the vector sum of both L2 and GAN gradients.
+        g_loss_total.backward()
+        opt_g.step()
 
     # =========================================================================
     # Return metrics for logging

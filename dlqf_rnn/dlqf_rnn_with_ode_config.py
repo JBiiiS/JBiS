@@ -29,6 +29,8 @@ class DLQFRNNWithODEConfig(DLQFRNNConfig):
     lambda_gan: float = 1.0
     lambda_l2: float = 0.01
 
+    only_d_epoch: int = 10
+
 
     def __post_init__(self):
         super().__post_init__()
