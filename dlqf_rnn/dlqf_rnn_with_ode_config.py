@@ -26,8 +26,8 @@ class DLQFRNNWithODEConfig(DLQFRNNConfig):
 
     output_dim: int = 1       # default matches BaseConfig.num_assets
 
-    lambda_gan: float = 0.01
-    lambda_l2: float = 1.0
+    lambda_gan: float = 1.0
+    lambda_l2: float = 0.01
 
 
     def __post_init__(self):
