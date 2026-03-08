@@ -138,9 +138,7 @@ def _train_with_cde(
     # to maintain the computational graph back to the Generator's parameters.
     # Since we already computed r_q_ode above and didn't detach the original tensor,
     # we can simply reuse it to save heavy ODE integration computations.
-    
-    # A. Base Geometrical Loss (Maintaining the ODE's fundamental structure)
-    loss_l2 = l2_distance_loss(y_b, r_q_ode)
+
 
     # B. Adversarial Loss (Tricking the Discriminator)
     # We pass the non-detached trajectory so gradients flow back to the ODE.
@@ -150,7 +148,7 @@ def _train_with_cde(
     # C. Unified Hybrid Loss
     lambda_gan = config.lambda_gan
     
-    g_loss_total = loss_l2 + (lambda_gan * loss_gan)
+    g_loss_total = (lambda_gan * loss_gan)
 
     # A single backward pass computes the vector sum of both L2 and GAN gradients.
     g_loss_total.backward()
@@ -159,4 +157,4 @@ def _train_with_cde(
     # =========================================================================
     # Return metrics for logging
     # =========================================================================
-    return fake_score.mean().item(), real_score.mean().item(), loss_l2.item()
+    return fake_score.mean().item(), real_score.mean().item() 
