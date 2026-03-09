@@ -6,10 +6,10 @@ from .dlqf_rnn_config import DLQFRNNConfig
 
 # ─────────────────────────────────────────
 # 1. BiLSTM Encoder
-#    3장 LSTM과의 차이:
-#    - bidirectional=True → output이 hidden_dim * 2
-#    - z 입력 없음 (단발성 예측이라 autoregressive 불필요)
-#    - 마지막 시점 hidden만 반환
+    #    3장 LSTM과의 차이:
+    #    - bidirectional=True → output이 hidden_dim * 2
+    #    - z 입력 없음 (단발성 예측이라 autoregressive 불필요)
+    #    - 마지막 시점 hidden만 반환
 # ─────────────────────────────────────────
 class BiLSTMEncoder(nn.Module):
     def __init__(self, config: DLQFRNNConfig):

@@ -57,7 +57,7 @@ class CDEFunc(nn.Module):
             (B, cde_hidden_dim, output_dim) — matrix field
         """
         # Same pattern as SDEDrift: broadcast 0-dim scalar t to (B, 1)
-        t_batch = torch.full((h.size(0), 1), float(t), device=h.device, dtype=h.dtype).detach()
+        t_batch = torch.full((h.size(0), 1), float(t.detach()), device=h.device, dtype=h.dtype)
         th  = torch.cat([t_batch, h], dim=-1)               # (B, 1 + cde_hidden_dim)
         out = self.net(th)                                   # (B, cde_hidden_dim * output_dim)
         return out.view(h.size(0), self.cde_hidden_dim, self.output_dim)

@@ -27,7 +27,3 @@ class DLQFRNNConfig(BaseConfig):
     scale_factor: int = 100  # |r| × 100 (numerical underflow 방지, 논문 4.2.3)
 
 
-
-    lambda_mse: float = 0.01
-    lambda_qlike: float = 0.01
-    
