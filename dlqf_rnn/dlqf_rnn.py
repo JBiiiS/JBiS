@@ -198,7 +198,7 @@ def l2_distance_loss(
 # ─────────────────────────────────────────
 # 5. MSE Loss (Mean Squared Error)
 #    실현변동성의 제곱 오차
-# ─────────────────────────────────────────
+# ────────────────────────────────────────
 def mse_loss(
     rv_true: torch.Tensor,   # (B,) — 실제 실현변동성
     rv_pred: torch.Tensor,   # (B,) — 예측 실현변동성
