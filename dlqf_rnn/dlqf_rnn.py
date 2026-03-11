@@ -71,7 +71,7 @@ class NQF(nn.Module):
 
         self.activation = nn.Tanh()
         
-    def forward(self, h: torch.Tensor, alpha: torch.Tensor, use_learnable_exp = False, use_non_learnable_exp = False) -> torch.Tensor:
+    def forward(self, h: torch.Tensor, alpha: torch.Tensor) -> torch.Tensor:
         """
         h     : (B, hidden_dim * 2)
         alpha : (B,)
@@ -86,7 +86,7 @@ class NQF(nn.Module):
             if i < len(self.layers) - 1:
                 x = self.activation(x)  # Tanh for intermediate layers
             # No activation on final layer—output is log-space
-            return x 
+        return x 
 
 
 # ─────────────────────────────────────────
@@ -127,9 +127,7 @@ class DLQFRNN(nn.Module):
         # alpha: (M,) → (B*M,)
         a_rep = alpha.unsqueeze(0).expand(B, M).reshape(B * M)
 
-        r_q = self.nqf(h_rep, a_rep, 
-                       use_learnable_exp = self.use_learnable_exp, 
-                       use_non_learnable_exp = self.use_non_learnable_exp)           # (B*M, 1)
+        r_q = self.nqf(h_rep, a_rep)           # (B*M, 1)
 
 
         r_q = r_q.squeeze(-1).reshape(B, M)    # (B, M)
