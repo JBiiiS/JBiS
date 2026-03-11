@@ -27,7 +27,7 @@ class DLQFRNNWithODEConfig(DLQFRNNConfig):
     output_dim: int = 1       # default matches BaseConfig.num_assets
 
     lambda_gan: float = 1.0
-    lambda_l2: float = 0.01
+    lambda_l2: float = 0.5
 
     only_d_epoch: int = 10
 

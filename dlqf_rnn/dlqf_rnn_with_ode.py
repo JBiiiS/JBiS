@@ -153,8 +153,9 @@ def _train_with_cde(
 
         # C. Unified Hybrid Loss
         lambda_gan = config.lambda_gan
+        lambda_l2 = config.lambda_l2
         
-        g_loss_total = loss_l2 + (lambda_gan * loss_gan)
+        g_loss_total = (lambda_l2 * loss_l2) + (lambda_gan * loss_gan)
 
         # A single backward pass computes the vector sum of both L2 and GAN gradients.
         g_loss_total.backward()
