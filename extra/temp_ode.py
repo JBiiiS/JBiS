@@ -136,3 +136,76 @@ Test MSE     : 0.00070665
 Test MAE     : 0.00007630
 Test MAPE    : 0.4983
 =============================================
+
+
+
+
+
+# ─────────────────────────────────────────
+# Load best model & evaluate on test set
+# ─────────────────────────────────────────
+model.load_state_dict(best_state)
+model.eval()
+
+
+test_loss_list = []
+rv_preds, rv_trues, gammas = [], [], []
+
+
+with torch.no_grad():
+    for i in range(len(X_te)):
+        x_b = X_te[i]
+        y_b = Y_te[i]
+        x_b = x_b.to(device)
+        y_b = y_b.to(device)
+
+        r_q, gamma = model(x_b, alpha)
+        test_loss = l2_distance_loss(y_b, r_q)
+        test_loss_1d = test_loss.unsqueeze(-1)
+
+        test_loss_list.append(test_loss_1d.cpu())
+
+        rv_pred_unscaled = (r_q ** 2).sum(dim=1) + gamma
+        rv_true_unscaled = (y_b ** 2).sum(dim=1)
+
+        rv_pred = rv_pred_unscaled / (cfg.scale_factor ** 2)
+        rv_true = rv_true_unscaled / (cfg.scale_factor ** 2)
+
+        rv_pred_1d = rv_pred.unsqueeze(-1)
+        rv_true_1d = rv_true.unsqueeze(-1)
+        gamma_1d = gamma.unsqueeze(-1)
+
+        rv_preds.append(rv_pred_1d.cpu())
+        rv_trues.append(rv_true_1d.cpu())
+        gammas.append(gamma_1d.cpu())
+
+
+
+test_losses = torch.cat(test_loss_list).mean(dim=0).item()
+rv_preds = torch.cat(rv_preds)
+rv_trues = torch.cat(rv_trues)
+gammas = torch.cat(gammas)
+
+mse  = ((rv_preds - rv_trues) ** 2).mean(dim=0).item()
+mae  = (rv_preds - rv_trues).abs().mean(dim=0).item()
+mape = ((rv_preds - rv_trues).abs() / (rv_trues + 1e-8)).mean(dim=0).item()
+
+
+df = pd.DataFrame({
+    'L2': test_losses.squeeze().cpu().numpy(),
+    'MSE': mse.squeeze().cpu().numpy(),
+    'MAE': mae.squeeze().cpu().numpy(),
+    'MAPE': mape.squeeze().cpu().numpy()
+})
+
+# Transpose해서 row = metric, column = 데이터 포인트
+df = df.T
+
+# Column names: 1, 2, 3, ... len(X_te)
+df.columns = range(1, df.shape[1] + 1)
+
+
+print(f"\n{'='*45}")
+print('*****************DLQF RNN******************')
+print(f"{'='*45}\n")
+df

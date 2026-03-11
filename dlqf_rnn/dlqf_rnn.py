@@ -60,12 +60,6 @@ class NQF(nn.Module):
 
         self.config = config
 
-        self.exp_deno_init = config.exp_deno_init
-
-        self.temperature_learnable = nn.Parameter(torch.tensor(self.exp_deno_init))
-
-        self.temperature_non_learnable = torch.tensor(self.exp_deno_init)
-
         # BiLSTM output size =  hidden_dim * 2
         in_dim = config.hidden_dim * 2
 
@@ -92,16 +86,6 @@ class NQF(nn.Module):
             if i < len(self.layers) - 1:
                 x = self.activation(x)  # Tanh for intermediate layers
             # No activation on final layer—output is log-space
-
-        if use_learnable_exp:
-            return torch.exp(x) / torch.abs(self.temperature_learnable) 
-        # Exponential ensures non-negativity
-
-        elif use_non_learnable_exp:
-            return torch.exp(x) / torch.abs(self.temperature_non_learnable)
-        # Exponential ensures non-negativity
-
-        else:
             return x 
 
 

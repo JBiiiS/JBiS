@@ -388,3 +388,83 @@ Min Gamma    : 0.049998
 Max Gamma    : 0.407760
 
 
+model_ode.load_state_dict(best_state_ode)
+model_ode.eval()
+
+test_loss_list = []
+rv_preds, rv_trues = [], []
+
+with torch.no_grad():
+    for i in range(len(X_te)):
+        x_b = X_te[i].unsqueeze(0)
+        y_b = Y_te[i].unsqueeze(0)
+        x_b = x_b.to(device)
+        y_b = y_b.to(device)
+
+        r_q_ode = model_ode(x_b)
+        test_loss = l2_distance_loss(y_b, r_q_ode)
+        test_loss_1d = test_loss.unsqueeze(-1)
+        
+        test_loss_list.append(test_loss_1d.cpu())
+
+        rv_pred_unscaled = (r_q_ode ** 2).sum(dim=1)
+        rv_true_unscaled = (y_b ** 2).sum(dim=1)
+
+        rv_pred = rv_pred_unscaled / (cfg.scale_factor ** 2)
+        rv_true = rv_true_unscaled / (cfg.scale_factor ** 2)
+
+        rv_pred_1d = rv_pred.unsqueeze(-1)
+        rv_true_1d = rv_true.unsqueeze(-1)
+
+        rv_preds.append(rv_pred_1d.cpu())
+        rv_trues.append(rv_true_1d.cpu())
+
+test_losses = torch.cat(test_loss_list)
+rv_preds = torch.cat(rv_preds)
+rv_trues = torch.cat(rv_trues)
+
+mse  = ((rv_preds - rv_trues) ** 2)
+mae  = (rv_preds - rv_trues).abs()
+mape = ((rv_preds - rv_trues).abs() / (rv_trues + 1e-8))
+
+df_ode = pd.DataFrame({
+    'L2': test_losses.squeeze().cpu().numpy(),
+    'MSE': mse.squeeze().cpu().numpy(),
+    'MAE': mae.squeeze().cpu().numpy(),
+    'MAPE': mape.squeeze().cpu().numpy()
+})
+
+# Transpose해서 row = metric, column = 데이터 포인트
+df_ode = df_ode.T
+
+# Column names: 1, 2, 3, ... len(X_te)
+df_ode.columns = range(1, df_ode.shape[1] + 1)
+
+print(f"\n{'='*45}")
+print('**************DLQF RNN WITH ODE**************')
+print(f"{'='*45}\n")
+df_ode
+
+
+
+
+	1	2	3	4
+L2	3.826637e-02	3.010750e-02	2.388628e-02	8.500399e-02
+MSE	8.846236e-12	8.662236e-10	1.455987e-12	9.319024e-09
+MAE	2.974262e-06	2.943168e-05	1.206643e-06	9.653509e-05
+MAPE	1.203382e-01	4.248195e-01	4.519074e-02	4.689773e-01
+
+
+
+
+
+
+3.826637e-02	3.010750e-02	2.388628e-02	8.500399e-02
+
+8.846236e-12	8.662236e-10	1.455987e-12	9.319024e-09
+
+
+2.974262e-06	2.943168e-05	1.206643e-06	9.653509e-05
+
+
+1.203382e-01	4.248195e-01	4.519074e-02	4.689773e-01
