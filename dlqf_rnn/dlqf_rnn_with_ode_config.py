@@ -28,6 +28,11 @@ class DLQFRNNWithODEConfig(DLQFRNNConfig):
 
     lambda_gan: float = 1.0
     lambda_l2: float = 0.5
+    lambda_qlike: float = 0.025
+
+    w_coef: float = 50.0
+    l2_coef: float = 1.0
+    qlike_coef = 0.05
 
     only_d_epoch: int = 10
 
