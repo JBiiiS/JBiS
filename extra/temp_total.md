@@ -114,6 +114,233 @@ MAE	2.124573e-05	1.457679e-05	2.876996e-04	3.801145e-05
 MAPE	4.991511e-01	6.675195e-01	5.235336e-01	5.823862e-01
 QLIKE	2.525482e-01	2.609367e-01	1.959860e+00	3.979515e-01
 
+Epoch [ 56/1000] | Early Stop Std: 0.063970 | Best Std (Post-ep 30): 0.06397033381191167
+   ↳ Val L2: 0.0396 | Val W-Dist: 0.0002 | Val QLIKE: 0.2812
+
+cfg.learning_rate = 0.01
+cfg.seed = 42
+device = cfg.device
+cfg.num_layers_lstm = 2
+cfg.hidden_dim = 16
+cfg.lstm_hidden_dim = cfg.hidden_dim
+cfg.ode_hidden_dim = 20
+cfg.use_learnable_exp = False
+cfg.use_non_learnable_exp = True
+cfg.exp_deno_init = 12
+cfg.lambda_gan = 1.0
+cfg.lambda_l2 = 0.1
+cfg.only_d_epoch = 20
+lambda_qlike = 0.05
+
+
+ODE DIS
+L2	3.512990e-02	3.409578e-02	7.599452e-02	4.518152e-02
+MSE	1.313908e-09	4.893356e-10	5.100029e-07	3.766769e-09
+MAE	2.225603e-05	1.533882e-05	2.846994e-04	3.875630e-05
+MAPE	5.767127e-01	7.790751e-01	5.629051e-01	6.588684e-01
+QLIKE	2.312081e-01	2.570156e-01	1.762340e+00	3.559254e-01
+
+
+
+
+
+
+
+
+
+
+
+cfg.learning_rate = 0.01
+cfg.seed = 42
+device = cfg.device
+cfg.num_layers_lstm = 2
+cfg.hidden_dim = 8
+cfg.lstm_hidden_dim = cfg.hidden_dim
+cfg.ode_hidden_dim = 9
+cfg.use_learnable_exp = False
+cfg.use_non_learnable_exp = True
+cfg.exp_deno_init = 17
+cfg.only_d_epoch = 20
+lambda_qlike = 0.1
+
+1	2	3	4
+L2	3.578625e-02	3.673267e-02	7.773114e-02	4.521824e-02
+MSE	1.436614e-09	4.373448e-10	4.050372e-07	3.871258e-09
+MAE	2.312488e-05	1.470337e-05	2.884840e-04	3.803876e-05
+MAPE	5.188560e-01	7.645762e-01	7.226534e-01	5.472745e-01
+QLIKE	2.466284e-01	2.553950e-01	1.665073e+00	3.603876e-01
+
+
+==================================================
+ode dis tuning
+=================================================
+
+(only ode: val loss 0.65826, 8/9/17)
+# Training Objective Weights (Gradient Calculation)
+cfg.lambda_gan = 1.0
+cfg.lambda_l2 = 0.1
+cfg.lambda_qlike = 0.0
+
+# Validation Early Stopping Coefficients (Metric Calculation)
+cfg.l2_coef = 1.0
+cfg.qlike_coef = 0.1  
+
+
+Epoch [ 64/1000] | Early Stop Std: 0.063751 | Best Std (Post-ep 30): 0.06375119564208118
+   ↳ Val L2: 0.0366 | Val QLIKE: 0.2712
+   ↳ Train L2: 0.0385 | Train QLIKE: 0.2286 | Fake: -0.0197 | Real: -0.0305       
+
+==================================================
+
+(위에거에서 lambda l2 0.1 -> 0.3)
+
+Epoch [ 68/500] | Early Stop Std: 0.063570 | Best Std (Post-ep 30): 0.06356966461647641
+   ↳ Val L2: 0.0369 | Val QLIKE: 0.2670
+   ↳ Train L2: 0.0389 | Train Q LIKE: 0.2186 | Fake: -0.0166 | Real: -0.0184
+
+
+   1	2	3	4
+L2	3.697564e-02	3.623650e-02	7.895191e-02	4.510097e-02
+MSE	1.649253e-09	4.358689e-10	3.911508e-07	4.026129e-09
+MAE	2.498544e-05	1.573264e-05	3.067708e-04	3.979634e-05
+MAPE	6.137331e-01	9.196838e-01	8.811908e-01	6.507763e-01
+QLIKE	2.251987e-01	2.663197e-01	1.485669e+00	3.224025e-01
+
+
+
+(org)
+1	2	3	4
+L2	4.629236e-02	4.223528e-02	8.277825e-02	5.438185e-02
+MSE	1.404118e-09	5.898676e-10	4.722520e-07	4.722222e-09
+MAE	2.477028e-05	1.949222e-05	2.765447e-04	4.894649e-05
+MAPE	6.825350e-01	1.273190e+00	6.684201e-01	1.035480e+00
+QLIKE	2.427966e-01	3.443787e-01	1.560321e+00	3.197661e-01
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 (org)

@@ -9,7 +9,7 @@ class DLQFRNNConfig(BaseConfig):
 
     input_dim: int = 6 # [log return, RV, volume, (ID), time: weekly, monthly, quarterly]
 
-    num_layers_lstm: int = 3
+    num_layers_lstm: int = 2
     num_layers_nqf: int = 3
 
 

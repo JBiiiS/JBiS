@@ -21,9 +21,6 @@ class DLQFRNNWithODEConfig(DLQFRNNConfig):
     exp_deno_init: float = 8.5
     softplus_deno: float = 100.0
     
-    gamma_init: float = 0.5
-    alpha_init: float = 1.0
-
     output_dim: int = 1       # default matches BaseConfig.num_assets
 
     lambda_gan: float = 1.0
@@ -34,7 +31,7 @@ class DLQFRNNWithODEConfig(DLQFRNNConfig):
     l2_coef: float = 1.0
     qlike_coef = 0.05
 
-    only_d_epoch: int = 10
+    only_d_epoch: int = 20
 
 
     def __post_init__(self):
